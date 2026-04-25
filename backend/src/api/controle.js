@@ -48,10 +48,17 @@ async function receberTextoDiscord(req, res) {
 
 async function obterUltimoJornal(req, res) {
     try {
-        const { data, error } = await supabase.from('journals').select('*').order('created_at', { ascending: false }).limit(1).single();
+        // Trocamos .single() por .maybeSingle() para não infartar se o banco estiver vazio
+        const { data, error } = await supabase.from('journals').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle();
         if (error) throw error;
+        
+        // Se não tiver jornal nenhum, devolvemos um jornal fictício de aviso
+        if (!data) {
+            return res.status(200).json({ content: { destaques: "O acervo está vazio. Use o Painel da Redação para enviar o primeiro manuscrito!" } });
+        }
         res.status(200).json(data);
     } catch (erro) {
+        console.error("🚨 ERRO AO PUXAR ÚLTIMO JORNAL:", erro);
         res.status(500).json({ erro: "Não foi possível carregar o jornal." });
     }
 }
@@ -60,8 +67,11 @@ async function listarTodosJornais(req, res) {
     try {
         const { data, error } = await supabase.from('journals').select('id, created_at, content').order('created_at', { ascending: false });
         if (error) throw error;
-        res.status(200).json(data);
+        
+        // Se der vazio, manda uma lista vazia [], assim o site não quebra o '.map'
+        res.status(200).json(data || []); 
     } catch (erro) {
+        console.error("🚨 ERRO AO LISTAR ACERVO:", erro);
         res.status(500).json({ erro: "Erro ao buscar acervo." });
     }
 }
