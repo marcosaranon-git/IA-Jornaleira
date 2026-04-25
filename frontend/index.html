@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel Exotic RPG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-stone-200 text-stone-900 p-8 font-serif min-h-screen relative">
+    
+    <aside class="fixed left-4 top-1/2 -translate-y-1/2 w-48 bg-stone-100 p-4 rounded shadow-lg border border-stone-300 hidden xl:block z-50">
+      <h3 class="font-bold border-b border-stone-800 mb-4 uppercase text-xs text-center">Edições Passadas</h3>
+      <ul id="lista-acervo" class="text-sm space-y-3 max-h-96 overflow-y-auto font-sans"></ul>
+    </aside>
+
+    <div class="max-w-4xl mx-auto bg-stone-100 p-10 rounded shadow-2xl border border-stone-300 relative z-10">
+      
+      <header class="text-center border-b-4 border-double border-stone-800 pb-6 mb-8">
+        <h1 class="text-5xl font-extrabold uppercase tracking-widest mb-2 text-stone-800">Crônicas do Mundo</h1>
+        <p class="text-sm italic text-stone-600 tracking-widest">SISTEMA EXOTIC - REGISTRO GEOPOLÍTICO</p>
+      </header>
+
+      <nav class="flex justify-center mb-8 border-b border-stone-300">
+        <button id="tab-jornal" class="px-8 py-2 font-bold uppercase tracking-widest border-b-4 border-stone-800 bg-stone-200">Jornal</button>
+        <button id="tab-dossie" class="px-8 py-2 font-bold uppercase tracking-widest border-b-4 border-transparent hover:bg-stone-200 transition">Dossiê Global</button>
+      </nav>
+
+      <div class="flex justify-center gap-4 mb-10" id="area-botoes">
+        <button id="btn-carregar" class="bg-stone-800 text-stone-100 px-6 py-2 rounded hover:bg-stone-700 transition font-sans font-bold">Carregar Última Edição</button>
+        <button id="btn-pdf" class="bg-emerald-800 text-emerald-100 px-6 py-2 rounded hover:bg-emerald-700 transition font-sans font-bold hidden">Baixar PDF</button>
+      </div>
+
+      <main id="secao-jornal" class="space-y-8">
+        <div id="jornal-conteudo" class="hidden"></div>
+        <div id="jornal-vazio" class="text-center py-20 text-stone-400 italic">Selecione uma edição ao lado ou carregue a última.</div>
+      </main>
+
+      <section id="secao-dossie" class="hidden space-y-6">
+        <h2 class="text-3xl font-black text-center uppercase mb-8 underline decoration-double">Estado Atual das Nações</h2>
+        <div id="lista-dossie" class="grid grid-cols-1 gap-6">
+          </div>
+      </section>
+
+    </div>
+
+    <div class="max-w-4xl mx-auto mt-12 bg-stone-300 p-8 rounded shadow-lg border border-stone-400 mb-10 relative z-10">
+      <h2 class="text-3xl font-extrabold mb-2 uppercase tracking-wide border-b-2 border-stone-800 pb-2">Painel da Redação</h2>
+      <form id="form-noticia" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block font-bold mb-1">Nação:</label>
+            <input type="text" id="input-autor" required class="w-full p-3 rounded border border-stone-400" placeholder="Ex: Japão">
+          </div>
+          <div>
+            <label class="block font-bold mb-1 text-red-900">Senha Secreta:</label>
+            <input type="password" id="input-senha" required class="w-full p-3 rounded border border-red-400 bg-red-50" placeholder="••••">
+          </div>
+        </div>
+        <div>
+          <label class="block font-bold mb-1">Relato dos Fatos:</label>
+          <textarea id="input-texto" required rows="5" class="w-full p-3 rounded border border-stone-400" placeholder="Descreva os últimos acontecimentos..."></textarea>
+        </div>
+        <button type="submit" class="bg-stone-800 text-stone-100 px-6 py-3 rounded hover:bg-stone-700 transition font-bold w-full text-lg shadow">Enviar Manuscrito</button>
+      </form>
+      <div id="msg-sucesso" class="hidden bg-emerald-200 text-emerald-800 border border-emerald-400 font-bold mt-4 p-3 rounded text-center">Manuscrito recebido!</div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,23 @@
+# Dependências do Node
+node_modules/
+**/node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Variáveis de Ambiente (Segurança Máxima)
+.env
+.env.*
+**/.env
+backend/.env
+frontend/.env
+
+# Logs e arquivos de sistema
+logs
+*.log
+npm-debug.log*
+.DS_Store
+.vscode/
+
+# Pastas de build
+dist/
+dist-ssr/
