@@ -16,38 +16,31 @@ const tabDossie = document.getElementById('tab-dossie');
 const listaDossie = document.getElementById('lista-dossie');
 
 // ==========================================
-// 1. LÓGICA DAS ABAS
+// 1. LÓGICA DAS ABAS (Com tema Carmesim)
 // ==========================================
 tabJornal.addEventListener('click', () => {
-    // Mostra o Jornal, Esconde o Dossiê
     secaoJornal.classList.remove('hidden');
     secaoDossie.classList.add('hidden');
     
-    // Atualiza o visual dos botões de Aba
-    tabJornal.classList.add('border-stone-800', 'bg-stone-200');
-    tabJornal.classList.remove('border-transparent');
-    tabDossie.classList.remove('border-stone-800', 'bg-stone-200');
-    tabDossie.classList.add('border-transparent');
+    tabJornal.classList.add('border-red-900', 'bg-red-100', 'text-red-900');
+    tabJornal.classList.remove('border-transparent', 'text-stone-600');
+    tabDossie.classList.remove('border-red-900', 'bg-red-100', 'text-red-900');
+    tabDossie.classList.add('border-transparent', 'text-stone-600');
     
-    // Mostra a área de botões (Carregar/PDF)
     areaBotoes.classList.remove('hidden');
 });
 
 tabDossie.addEventListener('click', async () => {
-    // Esconde o Jornal, Mostra o Dossiê
     secaoJornal.classList.add('hidden');
     secaoDossie.classList.remove('hidden');
     
-    // Atualiza o visual dos botões de Aba
-    tabDossie.classList.add('border-stone-800', 'bg-stone-200');
-    tabDossie.classList.remove('border-transparent');
-    tabJornal.classList.remove('border-stone-800', 'bg-stone-200');
-    tabJornal.classList.add('border-transparent');
+    tabDossie.classList.add('border-red-900', 'bg-red-100', 'text-red-900');
+    tabDossie.classList.remove('border-transparent', 'text-stone-600');
+    tabJornal.classList.remove('border-red-900', 'bg-red-100', 'text-red-900');
+    tabJornal.classList.add('border-transparent', 'text-stone-600');
     
-    // Esconde a área de botões (não queremos baixar PDF do dossiê agora)
     areaBotoes.classList.add('hidden');
 
-    // MÁGICA: Carrega o Dossiê do banco de dados na hora!
     await carregarDossie();
 });
 
@@ -55,39 +48,42 @@ tabDossie.addEventListener('click', async () => {
 // 2. BUSCAR E DESENHAR DOSSIÊ GLOBAL
 // ==========================================
 async function carregarDossie() {
-    listaDossie.innerHTML = '<p class="text-center italic text-stone-500 py-10">Consultando arquivos de inteligência da expansão Carmesim...</p>';
+    listaDossie.innerHTML = '<p class="text-center italic text-red-700 py-10 font-bold">Extraindo arquivos de inteligência da expansão Carmesim...</p>';
     try {
-        const res = await fetch('https://backend-ia-jornaleira.onrender.com/api/journals/latest');
+        // ROTA CORRIGIDA!
+        const res = await fetch('https://backend-ia-jornaleira.onrender.com/api/world-state');
         if (!res.ok) throw new Error("Erro ao buscar a memória do mundo.");
         
         const estadoMundo = await res.json();
         
-        if (!estadoMundo || !estadoMundo.nacoes_fichadas) {
-            listaDossie.innerHTML = '<p class="text-center italic text-stone-500 py-10">O dossiê ainda está vazio. Feche uma edição do jornal primeiro!</p>';
+        if (estadoMundo.erro) throw new Error(estadoMundo.erro);
+
+        if (!estadoMundo || !estadoMundo.nacoes_fichadas || estadoMundo.nacoes_fichadas.length === 0) {
+            listaDossie.innerHTML = '<p class="text-center italic text-stone-500 py-10 font-bold">O dossiê de sangue ainda está vazio. Feche uma edição do jornal primeiro!</p>';
             return;
         }
 
         listaDossie.innerHTML = estadoMundo.nacoes_fichadas.map(nacao => `
-            <article class="bg-stone-50 p-6 rounded border-l-8 border-stone-800 shadow-md">
-                <div class="flex justify-between items-center border-b border-stone-300 pb-2 mb-4">
-                    <h3 class="text-2xl font-black uppercase tracking-tighter">${nacao.nome_nacao}</h3>
-                    <span class="text-xs font-bold px-3 py-1 bg-stone-800 text-stone-100 rounded-full">FICHA ATUALIZADA</span>
+            <article class="bg-red-50 p-6 rounded border-l-8 border-red-900 shadow-md">
+                <div class="flex justify-between items-center border-b border-red-300 pb-2 mb-4">
+                    <h3 class="text-2xl font-black uppercase tracking-tighter text-red-950">${nacao.nome_nacao}</h3>
+                    <span class="text-xs font-bold px-3 py-1 bg-red-900 text-red-50 rounded-full shadow-sm">FICHA ATUALIZADA</span>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 font-sans">
                     <div>
-                        <h4 class="font-bold text-stone-500 uppercase text-xs mb-2 italic">Situação Interna</h4>
-                        <p class="text-stone-800 leading-relaxed text-sm">${nacao.situacao_interna}</p>
+                        <h4 class="font-bold text-red-800 uppercase text-xs mb-2 italic">Situação Interna</h4>
+                        <p class="text-stone-900 leading-relaxed text-sm">${nacao.situacao_interna}</p>
                     </div>
                     <div>
-                        <h4 class="font-bold text-stone-500 uppercase text-xs mb-2 italic">Postura Externa</h4>
-                        <p class="text-stone-800 leading-relaxed text-sm">${nacao.postura_externa}</p>
+                        <h4 class="font-bold text-red-800 uppercase text-xs mb-2 italic">Postura Externa</h4>
+                        <p class="text-stone-900 leading-relaxed text-sm">${nacao.postura_externa}</p>
                     </div>
                 </div>
             </article>
         `).join('');
     } catch (e) {
         console.error(e);
-        listaDossie.innerHTML = '<p class="text-red-600 font-bold text-center py-10">Erro ao acessar os arquivos confidenciais do servidor.</p>';
+        listaDossie.innerHTML = '<p class="text-red-700 font-bold text-center py-10">Erro ao acessar os arquivos confidenciais do servidor.</p>';
     }
 }
 
@@ -100,9 +96,9 @@ function desenharJornalNaTela(conteudo) {
     if (conteudo.destaques) {
       htmlGerado += `
         <section class="min-h-[1050px] flex flex-col">
-          <h2 class="text-3xl font-extrabold border-b-2 border-stone-800 mb-6 uppercase tracking-widest text-center mt-4">Página Principal</h2>
-          <h3 class="text-2xl font-bold border-b border-stone-400 mb-4 uppercase tracking-wide">Destaques</h3>
-          <div class="text-xl leading-relaxed text-justify whitespace-pre-line">${conteudo.destaques}</div>
+          <h2 class="text-3xl font-extrabold border-b-2 border-red-900 text-red-950 mb-6 uppercase tracking-widest text-center mt-4">Página Principal</h2>
+          <h3 class="text-2xl font-bold border-b border-red-300 text-red-900 mb-4 uppercase tracking-wide">Destaques</h3>
+          <div class="text-xl leading-relaxed text-justify whitespace-pre-line text-stone-900">${conteudo.destaques}</div>
         </section>
       `;
     }
@@ -111,8 +107,8 @@ function desenharJornalNaTela(conteudo) {
       htmlGerado += `
         <div class="html2pdf__page-break"></div> 
         <section class="min-h-[1050px] mt-10">
-          <h2 class="text-3xl font-extrabold border-b-2 border-stone-800 mb-6 uppercase tracking-widest text-center">Caderno de Política</h2>
-          <div class="text-lg leading-relaxed text-justify columns-2 gap-10 whitespace-pre-line">${conteudo.politica}</div>
+          <h2 class="text-3xl font-extrabold border-b-2 border-red-900 text-red-950 mb-6 uppercase tracking-widest text-center">Caderno de Política</h2>
+          <div class="text-lg leading-relaxed text-justify columns-2 gap-10 whitespace-pre-line text-stone-900">${conteudo.politica}</div>
         </section>
       `;
     }
@@ -121,8 +117,8 @@ function desenharJornalNaTela(conteudo) {
       htmlGerado += `
         <div class="html2pdf__page-break"></div> 
         <section class="min-h-[1050px] mt-10">
-          <h2 class="text-3xl font-extrabold border-b-2 border-stone-800 mb-6 uppercase tracking-widest text-center">Caderno de Economia</h2>
-          <div class="text-lg leading-relaxed text-justify columns-2 gap-10 whitespace-pre-line">${conteudo.economia}</div>
+          <h2 class="text-3xl font-extrabold border-b-2 border-red-900 text-red-950 mb-6 uppercase tracking-widest text-center">Caderno de Economia</h2>
+          <div class="text-lg leading-relaxed text-justify columns-2 gap-10 whitespace-pre-line text-stone-900">${conteudo.economia}</div>
         </section>
       `;
     }
@@ -130,14 +126,13 @@ function desenharJornalNaTela(conteudo) {
     if (conteudo.conflitos) {
       htmlGerado += `
         <div class="html2pdf__page-break"></div> 
-        <section class="min-h-[1050px] mt-10 bg-stone-200 p-10 rounded border-l-8 border-stone-800">
-          <h2 class="text-3xl font-extrabold border-b-2 border-stone-800 mb-6 uppercase tracking-widest text-center">Boletim de Conflitos</h2>
-          <div class="text-lg leading-relaxed text-justify columns-2 gap-10 whitespace-pre-line">${conteudo.conflitos}</div>
+        <section class="min-h-[1050px] mt-10 bg-red-50 p-10 rounded border-l-8 border-red-900 shadow-sm">
+          <h2 class="text-3xl font-extrabold border-b-2 border-red-900 text-red-950 mb-6 uppercase tracking-widest text-center">Boletim de Conflitos</h2>
+          <div class="text-lg leading-relaxed text-justify columns-2 gap-10 whitespace-pre-line text-stone-900">${conteudo.conflitos}</div>
         </section>
       `;
     }
 
-    // Esconde o aviso de "Jornal Vazio" e mostra as notícias
     jornalVazio.classList.add('hidden');
     containerJornal.innerHTML = htmlGerado;
     containerJornal.classList.remove('hidden');
@@ -152,10 +147,19 @@ btnCarregar.addEventListener('click', async () => {
   btnCarregar.disabled = true;
 
   try {
-    const resposta = await fetch('https://backend-ia-jornaleira.onrender.com/api/journals');
+    // ROTA CORRIGIDA E BLINDADA!
+    const resposta = await fetch('https://backend-ia-jornaleira.onrender.com/api/journals/latest');
     if (!resposta.ok) throw new Error("Erro na rede.");
     
     const dados = await resposta.json();
+    
+    if (dados.erro || !dados.content) {
+        document.getElementById('jornal-conteudo').innerHTML = `<p class="text-red-700 italic text-center py-10 font-bold">O acervo de Carmesim está vazio ou a edição foi perdida. A redação aguarda sangue novo.</p>`;
+        jornalVazio.classList.add('hidden');
+        containerJornal.classList.remove('hidden');
+        return;
+    }
+
     desenharJornalNaTela(dados.content); 
 
     btnCarregar.innerText = 'Edição Lida com Sucesso!';
@@ -174,14 +178,23 @@ btnCarregar.addEventListener('click', async () => {
 async function carregarAcervo() {
     const lista = document.getElementById('lista-acervo');
     try {
-        const resposta = await fetch('https://backend-ia-jornaleira.onrender.com/api/world-state');
+        // ROTA CORRIGIDA!
+        const resposta = await fetch('https://backend-ia-jornaleira.onrender.com/api/journals');
         const jornais = await resposta.json();
 
-        lista.innerHTML = jornais.map(j => {
+        if (!Array.isArray(jornais) || jornais.length === 0) {
+            lista.innerHTML = '<p class="text-stone-500 p-4 font-bold">O acervo está vazio.</p>';
+            return;
+        }
+
+        // Tira os jornais corrompidos da lista!
+        const jornaisValidos = jornais.filter(j => j.content !== null);
+
+        lista.innerHTML = jornaisValidos.map(j => {
             const data = new Date(j.created_at).toLocaleDateString('pt-BR');
             return `
                 <li>
-                    <button data-id="${j.id}" class="btn-historico w-full text-left bg-stone-200 p-2 rounded hover:bg-stone-300 transition font-bold text-stone-700">
+                    <button data-id="${j.id}" class="btn-historico w-full text-left bg-red-100 p-2 rounded hover:bg-red-200 border border-red-200 transition font-bold text-red-950 shadow-sm">
                         Edição de ${data}
                     </button>
                 </li>
@@ -190,11 +203,9 @@ async function carregarAcervo() {
 
         document.querySelectorAll('.btn-historico').forEach(botao => {
             botao.addEventListener('click', () => {
-                // Se estiver no dossiê, força a voltar pra aba de jornal pra ler
                 tabJornal.click();
-                
                 const id = botao.getAttribute('data-id');
-                const jornalEscolhido = jornais.find(j => j.id === id);
+                const jornalEscolhido = jornaisValidos.find(j => j.id === id);
                 if(jornalEscolhido) {
                     desenharJornalNaTela(jornalEscolhido.content);
                     btnCarregar.innerText = `Lendo edição de ${new Date(jornalEscolhido.created_at).toLocaleDateString('pt-BR')}`;
@@ -217,23 +228,21 @@ btnPdf.addEventListener('click', () => {
 
     const elemento = document.querySelector('.max-w-4xl'); 
     
-    // Escondendo os menus temporariamente para não saírem no PDF
     const areaNav = document.querySelector('nav');
-    areaBotoes.classList.add('hidden');
-    areaNav.classList.add('hidden');
+    if(areaBotoes) areaBotoes.classList.add('hidden');
+    if(areaNav) areaNav.classList.add('hidden');
 
     const opcoes = {
         margin:       [10, 10, 10, 10],
-        filename:     'Cronicas_do_Mundo.pdf',
+        filename:     'Cronicas_de_Carmesim.pdf',
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     html2pdf().set(opcoes).from(elemento).save().then(() => {
-        // Trazendo os botões de volta
-        areaBotoes.classList.remove('hidden');
-        areaNav.classList.remove('hidden');
+        if(areaBotoes) areaBotoes.classList.remove('hidden');
+        if(areaNav) areaNav.classList.remove('hidden');
         btnPdf.innerText = textoOriginal;
     });
 });
@@ -244,45 +253,47 @@ btnPdf.addEventListener('click', () => {
 const formNoticia = document.getElementById('form-noticia');
 const msgSucesso = document.getElementById('msg-sucesso');
 
-formNoticia.addEventListener('submit', async (e) => {
-    e.preventDefault(); 
-    const botao = formNoticia.querySelector('button');
-    botao.innerText = 'Enviando corvo...';
-    botao.disabled = true;
+if(formNoticia) {
+    formNoticia.addEventListener('submit', async (e) => {
+        e.preventDefault(); 
+        const botao = formNoticia.querySelector('button');
+        botao.innerText = 'Enviando corvo...';
+        botao.disabled = true;
 
-    const autor = document.getElementById('input-autor').value;
-    const texto = document.getElementById('input-texto').value;
-    const senha = document.getElementById('input-senha').value; 
+        const autor = document.getElementById('input-autor').value;
+        const texto = document.getElementById('input-texto').value;
+        const senha = document.getElementById('input-senha').value; 
 
-    try {
-        const resposta = await fetch('https://backend-ia-jornaleira.onrender.com/api/webhooks/discord-entries', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                discord_id: "site_form_" + autor.toLowerCase().replace(/\s+/g, '_'), 
-                nome_autor: autor,
-                texto_mensagem: texto,
-                senha: senha,
-                id_mensagem: "msg_site_" + Date.now() 
-            })
-        });
+        try {
+            const resposta = await fetch('https://backend-ia-jornaleira.onrender.com/api/webhooks/discord-entries', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    discord_id: "site_form_" + autor.toLowerCase().replace(/\s+/g, '_'), 
+                    nome_autor: autor,
+                    texto_mensagem: texto,
+                    senha: senha,
+                    id_mensagem: "msg_site_" + Date.now() 
+                })
+            });
 
-        if (!resposta.ok) {
-            if (resposta.status === 401) {
-                throw new Error("Senha da Redação incorreta. Acesso negado.");
+            if (!resposta.ok) {
+                if (resposta.status === 401) {
+                    throw new Error("Senha da Redação incorreta. Acesso negado.");
+                }
+                throw new Error("Erro na rede. O servidor respondeu com problema.");
             }
-            throw new Error("Erro na rede. O servidor respondeu com problema.");
+
+            msgSucesso.classList.remove('hidden');
+            formNoticia.reset(); 
+            setTimeout(() => msgSucesso.classList.add('hidden'), 4000);
+
+        } catch (erro) {
+            console.error(erro);
+            alert(erro.message); 
+        } finally {
+            botao.innerText = 'Enviar Manuscrito';
+            botao.disabled = false;
         }
-
-        msgSucesso.classList.remove('hidden');
-        formNoticia.reset(); 
-        setTimeout(() => msgSucesso.classList.add('hidden'), 4000);
-
-    } catch (erro) {
-        console.error(erro);
-        alert(erro.message); 
-    } finally {
-        botao.innerText = 'Enviar Manuscrito';
-        botao.disabled = false;
-    }
-});
+    });
+}
