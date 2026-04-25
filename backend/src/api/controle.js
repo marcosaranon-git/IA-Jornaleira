@@ -2,7 +2,7 @@ const supabase = require('../infra/supabase');
 const { processarTextosPendentes } = require('../workers/processaTexto');
 
 // Defina aqui a senha secreta para enviar notícias
-const SENHA_MESTRE = "federacao"; 
+const SENHA_MESTRE = "FedRp2026"; 
 
 async function receberTextoDiscord(req, res) {
     try {

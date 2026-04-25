@@ -34,7 +34,7 @@ const cron = require('node-cron');
 const { fecharEdicaoJornal } = require('./workers/fecharEdicao');
 
 // Agendar para rodar a cada 3 dias (à meia-noite)
-cron.schedule('0 0 */3 * *', () => {
-  console.log("⏰ 3 dias se passaram. Iniciando fechamento automático da edição...");
+cron.schedule('0 0 */2 * *', () => {
+  console.log("⏰ 2 dias se passaram. Iniciando fechamento automático da edição...");
   fecharEdicaoJornal();
 });
