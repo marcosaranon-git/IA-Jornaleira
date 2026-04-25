@@ -2,18 +2,16 @@ const supabase = require('../infra/supabase');
 const { processarTextosPendentes } = require('../workers/processaTexto');
 
 // Defina aqui a senha secreta para enviar notícias
-const SENHA_MESTRE = "federacao"; // Você pode mudar para a senha que quiser!
+const SENHA_MESTRE = "federacao"; 
 
 async function receberTextoDiscord(req, res) {
     try {
-        // Agora também esperamos receber uma 'senha'
         const { discord_id, nome_autor, texto_mensagem, id_mensagem, senha } = req.body;
 
         if (!discord_id || !texto_mensagem || !senha) {
             return res.status(400).json({ erro: "Faltam dados obrigatórios." });
         }
 
-        // BARRICADA DE SEGURANÇA: Checa a senha
         if (senha !== SENHA_MESTRE) {
             console.log(`🚫 Tentativa de invasão bloqueada! Nação: ${nome_autor}`);
             return res.status(401).json({ erro: "Senha da Redação incorreta. Acesso negado." });
@@ -48,13 +46,11 @@ async function receberTextoDiscord(req, res) {
 
 async function obterUltimoJornal(req, res) {
     try {
-        // Trocamos .single() por .maybeSingle() para não infartar se o banco estiver vazio
         const { data, error } = await supabase.from('journals').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle();
         if (error) throw error;
         
-        // Se não tiver jornal nenhum, devolvemos um jornal fictício de aviso
         if (!data) {
-            return res.status(200).json({ content: { destaques: "O acervo está vazio. Use o Painel da Redação para enviar o primeiro manuscrito!" } });
+            return res.status(200).json({ content: { destaques: "O acervo de Carmesim está vazio. Use o Painel da Redação para enviar o primeiro manuscrito!" } });
         }
         res.status(200).json(data);
     } catch (erro) {
@@ -68,7 +64,6 @@ async function listarTodosJornais(req, res) {
         const { data, error } = await supabase.from('journals').select('id, created_at, content').order('created_at', { ascending: false });
         if (error) throw error;
         
-        // Se der vazio, manda uma lista vazia [], assim o site não quebra o '.map'
         res.status(200).json(data || []); 
     } catch (erro) {
         console.error("🚨 ERRO AO LISTAR ACERVO:", erro);
@@ -76,7 +71,6 @@ async function listarTodosJornais(req, res) {
     }
 }
 
-// NOVA ROTA: Puxa o Dossiê Geopolítico atualizado
 async function obterDossieAtual(req, res) {
     try {
         const { data, error } = await supabase
@@ -84,36 +78,20 @@ async function obterDossieAtual(req, res) {
             .select('state_json')
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle(); // <-- Blindado!
 
         if (error) throw error;
+        
+        // Se não tiver dossiê ainda, manda vazio sem quebrar!
+        if (!data) {
+            return res.status(200).json({ nacoes_fichadas: [] }); 
+        }
+        
         res.status(200).json(data.state_json);
     } catch (erro) {
+        console.error("🚨 ERRO AO CARREGAR DOSSIE:", erro);
         res.status(500).json({ erro: "Erro ao carregar o Dossiê." });
     }
 }
 
-async function obterUltimoJornal(req, res) {
-    try {
-        const { data, error } = await supabase.from('journals').select('*').order('created_at', { ascending: false }).limit(1).single();
-        if (error) throw error;
-        res.status(200).json(data);
-    } catch (erro) {
-        console.error("🚨 ERRO AO PUXAR ÚLTIMO JORNAL:", erro); // <--- ADICIONE ESTA LINHA
-        res.status(500).json({ erro: "Não foi possível carregar o jornal." });
-    }
-}
-
-async function listarTodosJornais(req, res) {
-    try {
-        const { data, error } = await supabase.from('journals').select('id, created_at, content').order('created_at', { ascending: false });
-        if (error) throw error;
-        res.status(200).json(data);
-    } catch (erro) {
-        console.error("🚨 ERRO AO LISTAR ACERVO:", erro); // <--- ADICIONE ESTA LINHA
-        res.status(500).json({ erro: "Erro ao buscar acervo." });
-    }
-}
-
-// Lembre-se de exportar a nova rota!
 module.exports = { receberTextoDiscord, obterUltimoJornal, listarTodosJornais, obterDossieAtual };
