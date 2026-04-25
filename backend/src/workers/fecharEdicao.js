@@ -108,13 +108,12 @@ async function fecharEdicaoJornal() {
         await supabase
             .from('world_memory')
             .insert([{ state_json: resposta.novo_estado_mundo }]);
-/*
+
         // 6. Limpeza
         await supabase
             .from('processed_entries')
             .update({ is_used: true })
             .eq('is_used', false);
-*/
 
         console.log("✅ Edição finalizada com Dossiê Geopolítico!");
         console.log("📝 Nações Fichadas:", resposta.novo_estado_mundo.nacoes_fichadas.map(n => n.nome_nacao).join(', '));
