@@ -294,3 +294,15 @@ code {
     border-right-color: var(--border);
   }
 }
+
+/* Proteção contra a IA gerando títulos esmagados */
+#jornal-conteudo h1, 
+#jornal-conteudo h2, 
+#jornal-conteudo h3, 
+#jornal-conteudo h4, 
+#jornal-conteudo strong {
+    line-height: 1.4 !important;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+}
