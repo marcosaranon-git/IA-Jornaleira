@@ -57,7 +57,7 @@ tabDossie.addEventListener('click', async () => {
 async function carregarDossie() {
     listaDossie.innerHTML = '<p class="text-center italic text-stone-500 py-10">Consultando arquivos de inteligência da expansão Carmesim...</p>';
     try {
-        const res = await fetch('http://https://backend-ia-jornaleira.onrender.com/api/world-state');
+        const res = await fetch('https://backend-ia-jornaleira.onrender.com/api/journals/latest');
         if (!res.ok) throw new Error("Erro ao buscar a memória do mundo.");
         
         const estadoMundo = await res.json();
@@ -152,7 +152,7 @@ btnCarregar.addEventListener('click', async () => {
   btnCarregar.disabled = true;
 
   try {
-    const resposta = await fetch('http://https://backend-ia-jornaleira.onrender.com/api/journals/latest');
+    const resposta = await fetch('https://backend-ia-jornaleira.onrender.com/api/journals');
     if (!resposta.ok) throw new Error("Erro na rede.");
     
     const dados = await resposta.json();
@@ -174,7 +174,7 @@ btnCarregar.addEventListener('click', async () => {
 async function carregarAcervo() {
     const lista = document.getElementById('lista-acervo');
     try {
-        const resposta = await fetch('http://https://backend-ia-jornaleira.onrender.com/api/journals');
+        const resposta = await fetch('https://backend-ia-jornaleira.onrender.com/api/world-state');
         const jornais = await resposta.json();
 
         lista.innerHTML = jornais.map(j => {
@@ -255,7 +255,7 @@ formNoticia.addEventListener('submit', async (e) => {
     const senha = document.getElementById('input-senha').value; 
 
     try {
-        const resposta = await fetch('http://https://backend-ia-jornaleira.onrender.com/api/webhooks/discord-entries', {
+        const resposta = await fetch('https://backend-ia-jornaleira.onrender.com/api/webhooks/discord-entries', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
