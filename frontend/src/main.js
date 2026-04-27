@@ -190,6 +190,10 @@ async function carregarAcervo() {
         // Tira os jornais corrompidos da lista!
         const jornaisValidos = jornais.filter(j => j.content !== null);
 
+        if (jornaisValidos.length > 0) {
+            iniciarRelogioDoJornal(jornaisValidos[0].created_at);
+        }
+
         lista.innerHTML = jornaisValidos.map(j => {
             const data = new Date(j.created_at).toLocaleDateString('pt-BR');
             return `
@@ -296,4 +300,41 @@ if(formNoticia) {
             botao.disabled = false;
         }
     });
+}
+
+// ==========================================
+// 8. RELÓGIO DA PRÓXIMA EDIÇÃO
+// ==========================================
+let cronometroDaIA;
+
+function iniciarRelogioDoJornal(dataUltimaEdicao) {
+    clearInterval(cronometroDaIA); // Limpa relógios antigos
+    const timerElemento = document.getElementById('contador-tempo');
+    if (!timerElemento) return;
+
+    // Calcula a data da próxima edição (Data do Último Jornal + 3 dias)
+    const dataProxima = new Date(new Date(dataUltimaEdicao).getTime() + (3 * 24 * 60 * 60 * 1000));
+
+    cronometroDaIA = setInterval(() => {
+        const agora = new Date();
+        const tempoRestante = dataProxima - agora;
+
+        // Se o tempo zerou, avisa que a IA está trabalhando
+        if (tempoRestante <= 0) {
+            timerElemento.innerHTML = "<span class='text-amber-400 animate-pulse'>A Redação está escrevendo...</span>";
+            return;
+        }
+
+        const dias = Math.floor(tempoRestante / (1000 * 60 * 60 * 24));
+        const horas = Math.floor((tempoRestante % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutos = Math.floor((tempoRestante % (1000 * 60 * 60)) / (1000 * 60));
+        const segundos = Math.floor((tempoRestante % (1000 * 60)) / 1000);
+
+        // Adiciona um zero à esquerda se for menor que 10 (ex: 09s)
+        const hrStr = horas.toString().padStart(2, '0');
+        const minStr = minutos.toString().padStart(2, '0');
+        const segStr = segundos.toString().padStart(2, '0');
+
+        timerElemento.innerText = `${dias}d ${hrStr}h ${minStr}m ${segStr}s`;
+    }, 1000);
 }
