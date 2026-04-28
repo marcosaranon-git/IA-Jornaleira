@@ -44,7 +44,6 @@ app.listen(PORT, () => {
 });
 
 const cron = require('node-cron');
-const { fecharEdicaoJornal } = require('./workers/fecharEdicao');
 
 // Agendar para rodar a cada 3 dias (à meia-noite)
 cron.schedule('0 0 */2 * *', () => {
