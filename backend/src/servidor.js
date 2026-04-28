@@ -4,6 +4,11 @@ const cors = require('cors'); // Puxando o CORS
 const app = express();
 
 app.use(cors()); // Liberando geral para o site conseguir ler os dado
+
+app.get('/api/ping', (req, res) => {
+    res.status(200).send("Estou acordado!");
+});
+
 app.use(express.json());
 
 require('./infra/supabase');
