@@ -9,6 +9,14 @@ app.get('/api/ping', (req, res) => {
     res.status(200).send("Estou acordado!");
 });
 
+const { fecharEdicaoJornal } = require('./workers/fecharEdicao');
+
+app.get('/api/forcar-edicao', (req, res) => {
+    console.log("🚨 Acordando a Editora Chefe na marra!");
+    fecharEdicaoJornal(); 
+    res.status(200).send("A IA começou a escrever! Olhe os logs do Render.");
+});
+
 app.use(express.json());
 
 require('./infra/supabase');
