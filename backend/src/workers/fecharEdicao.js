@@ -63,13 +63,14 @@ async function fecharEdicaoJornal() {
         1. TOM IMPARCIAL E SÓBRIO: Seja pé no chão, analítica e estritamente jornalística. NÃO SEJA ALARMISTA. Não exagere a gravidade das situações, não crie pânico desnecessário e evite adjetivos sensacionalistas.
         2. FIDELIDADE AOS FATOS (MUITO IMPORTANTE): Respeite as nuances das notícias originais. Se uma nação impôs uma regra com exceções ou avisos prévios, INCLUA essa informação. Não omita detalhes para fazer uma nação parecer "vilã" ou "heroína". Ater-se aos fatos relatados.
         3. CRUZAMENTO DE DADOS: Conecte os fatos se várias nações falarem do mesmo assunto, mas mantenha a objetividade: "Fontes apontam que...", "A medida coincide com...".
-        4. DIAGRAMAÇÃO (SUBTÍTULOS): Separe as notícias distintas dentro de cada categoria usando subtítulos. Para isso, use EXATAMENTE esta tag HTML para os títulos: <h4 class="font-extrabold text-xl mt-6 mb-2 text-stone-800 border-b border-stone-300">SEU SUBTÍTULO AQUI</h4> seguido do texto da notícia em formato normal.
-        
+        4. DIAGRAMAÇÃO (SUBTÍTULOS): Separe as notícias distintas dentro de cada categoria usando subtítulos. Para isso, use EXATAMENTE esta tag HTML para os títulos (USE ASPAS SIMPLES): <h4 class='font-extrabold text-xl mt-6 mb-2 text-stone-800 border-b border-stone-300'>SEU SUBTÍTULO AQUI</h4> seguido do texto da notícia em formato normal.
+        5. REGRA DE OURO DO FORMATO: NUNCA use aspas duplas (") dentro dos textos das notícias. Se precisar citar algo, use aspas simples (').
+
         TAREFAS:
         1. JORNAL: Escreva a narrativa cruzando as informações. Use a tag de subtítulo (h4) que te ensinei para separar os assuntos dentro de Política, Economia e Conflitos. Nunca invente atritos que não foram citados.
         2. MEMÓRIA: Atualize o dossiê. Registre fatos concretos e literais.
 
-        Retorne EXATAMENTE este JSON:
+        Retorne EXATAMENTE este JSON puro (sem marcadores de markdown):
         {
           "jornal_html": {
             "destaques": "...",
@@ -81,7 +82,7 @@ async function fecharEdicaoJornal() {
             "nacoes_fichadas": [
               {
                 "nome_nacao": "Nome da Nação",
-                "situacao_interna": "O que está acontecendo dentro dela (economia, leis, revoltas)",
+                "situacao_interna": "O que está acontecendo dentro dela",
                 "postura_externa": "Ações diplomáticas, fronteiras, conflitos"
               }
             ],
@@ -92,7 +93,12 @@ async function fecharEdicaoJornal() {
         }`;
 
         const result = await model.generateContent(prompt);
-        const resposta = JSON.parse(result.response.text());
+        
+        // 🧹 A GRANDE FAXINA: Limpa blocos markdown e lixos que a IA possa ter mandado antes de transformar em JSON
+        let textoCru = result.response.text();
+        textoCru = textoCru.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+        const resposta = JSON.parse(textoCru);
 
         // 4. Salva o Jornal
         const { data: novoJornal } = await supabase
