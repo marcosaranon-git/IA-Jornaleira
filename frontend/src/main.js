@@ -48,44 +48,93 @@ tabDossie.addEventListener('click', async () => {
 // 2. BUSCAR E DESENHAR DOSSIÊ GLOBAL
 // ==========================================
 async function carregarDossie() {
-    listaDossie.innerHTML = '<p class="text-center italic text-red-700 py-10 font-bold">Extraindo arquivos de inteligência da expansão Carmesim...</p>';
+    const menuNacoes = document.getElementById('menu-nacoes');
+    const conteudoFicha = document.getElementById('conteudo-ficha');
+    
+    menuNacoes.innerHTML = '<p class="text-red-700 animate-pulse">Consultando arquivos...</p>';
+    
     try {
-        // ROTA CORRIGIDA!
         const res = await fetch('https://backend-ia-jornaleira.onrender.com/api/world-state');
-        if (!res.ok) throw new Error("Erro ao buscar a memória do mundo.");
+        if (!res.ok) throw new Error("Erro ao buscar a memória.");
         
         const estadoMundo = await res.json();
         
-        if (estadoMundo.erro) throw new Error(estadoMundo.erro);
-
         if (!estadoMundo || !estadoMundo.nacoes_fichadas || estadoMundo.nacoes_fichadas.length === 0) {
-            listaDossie.innerHTML = '<p class="text-center italic text-stone-500 py-10 font-bold">O dossiê de sangue ainda está vazio. Feche uma edição do jornal primeiro!</p>';
+            menuNacoes.innerHTML = "";
+            conteudoFicha.innerHTML = '<p class="text-center italic text-stone-500 py-10">Nenhum dado de inteligência disponível ainda.</p>';
             return;
         }
 
-        listaDossie.innerHTML = estadoMundo.nacoes_fichadas.map(nacao => `
-            <article class="bg-red-50 p-6 rounded border-l-8 border-red-900 shadow-md">
-                <div class="flex justify-between items-center border-b border-red-300 pb-2 mb-4">
-                    <h3 class="text-2xl font-black uppercase tracking-tighter text-red-950">${nacao.nome_nacao}</h3>
-                    <span class="text-xs font-bold px-3 py-1 bg-red-900 text-red-50 rounded-full shadow-sm">FICHA ATUALIZADA</span>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 font-sans">
-                    <div>
-                        <h4 class="font-bold text-red-800 uppercase text-xs mb-2 italic">Situação Interna</h4>
-                        <p class="text-stone-900 leading-relaxed text-sm">${nacao.situacao_interna}</p>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-red-800 uppercase text-xs mb-2 italic">Postura Externa</h4>
-                        <p class="text-stone-900 leading-relaxed text-sm">${nacao.postura_externa}</p>
-                    </div>
-                </div>
-            </article>
+        // 1. Criar os botões do Menu
+        menuNacoes.innerHTML = estadoMundo.nacoes_fichadas.map(nacao => `
+            <button 
+                onclick="exibirFichaNacao('${nacao.nome_nacao.replace(/'/g, "\\'")}')"
+                class="btn-nacao px-4 py-2 bg-stone-100 border border-red-200 rounded text-sm font-bold text-red-900 hover:bg-red-900 hover:text-white transition-all shadow-sm"
+            >
+                ${nacao.nome_nacao}
+            </button>
         `).join('');
+
+        // Salva os dados globalmente para a função de exibir usar depois
+        window.dadosDossieAtual = estadoMundo.nacoes_fichadas;
+
     } catch (e) {
         console.error(e);
-        listaDossie.innerHTML = '<p class="text-red-700 font-bold text-center py-10">Erro ao acessar os arquivos confidenciais do servidor.</p>';
+        menuNacoes.innerHTML = '<p class="text-red-600 font-bold">Erro ao carregar menu.</p>';
     }
 }
+
+// FUNÇÃO PARA EXIBIR A FICHA DE UMA NAÇÃO ESPECÍFICA
+window.exibirFichaNacao = function(nomeNacao) {
+    const conteudoFicha = document.getElementById('conteudo-ficha');
+    const nacao = window.dadosDossieAtual.find(n => n.nome_nacao === nomeNacao);
+
+    if (!nacao) return;
+
+    // Atualiza o visual dos botões (marcar o selecionado)
+    document.querySelectorAll('.btn-nacao').forEach(btn => {
+        if (btn.innerText === nomeNacao) {
+            btn.classList.add('bg-red-900', 'text-white');
+        } else {
+            btn.classList.remove('bg-red-900', 'text-white');
+        }
+    });
+
+    // Desenha a ficha com o tema Carmesim
+    conteudoFicha.innerHTML = `
+        <article class="bg-red-50 p-8 rounded border-l-8 border-red-900 shadow-xl fade-in">
+            <div class="flex justify-between items-center border-b border-red-300 pb-3 mb-6">
+                <h3 class="text-4xl font-black uppercase tracking-tighter text-red-950">${nacao.nome_nacao}</h3>
+                <div class="text-right">
+                    <span class="block text-[10px] font-bold text-red-800 uppercase">Status do Relatório</span>
+                    <span class="text-xs font-black px-3 py-1 bg-red-900 text-red-50 rounded-full">CONFIDENCIAL</span>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10 font-sans">
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 border-b border-red-200 pb-1">
+                        <span class="text-lg">🏛️</span>
+                        <h4 class="font-bold text-red-900 uppercase text-sm tracking-widest">Situação Interna</h4>
+                    </div>
+                    <p class="text-stone-900 leading-relaxed text-base bg-white/50 p-4 rounded border border-red-100">${nacao.situacao_interna}</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 border-b border-red-200 pb-1">
+                        <span class="text-lg">🌍</span>
+                        <h4 class="font-bold text-red-900 uppercase text-sm tracking-widest">Postura Geopolítica</h4>
+                    </div>
+                    <p class="text-stone-900 leading-relaxed text-base bg-white/50 p-4 rounded border border-red-100">${nacao.postura_externa}</p>
+                </div>
+            </div>
+
+            <footer class="mt-8 pt-4 border-t border-red-200 text-[10px] text-red-800 italic text-center uppercase tracking-widest">
+                Dados processados pela IA Jornaleira - Protocolo Carmesim
+            </footer>
+        </article>
+    `;
+};
 
 // ==========================================
 // 3. FUNÇÃO MESTRE: DESENHAR O JORNAL

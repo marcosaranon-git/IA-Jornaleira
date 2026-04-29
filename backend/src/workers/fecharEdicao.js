@@ -49,47 +49,50 @@ async function fecharEdicaoJornal() {
             generationConfig: { responseMimeType: "application/json" }
         });
 
-        // 3. O NOVO PROMPT: Muito mais rigoroso e focado em reter nomes e fatos!
-        const prompt = `Você é a Editora Chefe e Arquivista de um jornal geopolítico de RPG. 
-        Seu trabalho é escrever o jornal, fazer conexões lógicas entre os fatos, e manter um dossiê ESTRITAMENTE DETALHADO das nações.
+        // Prompt para a IA
+        const prompt = `Você é a Editora Chefe, Analista de Inteligência e Arquivista Mestre do jornal geopolítico "Crônicas de Carmesim" (Sistema Exotic RPG).
+        Seu trabalho é transformar relatos brutos em matérias jornalísticas coesas, conectar pontos cegos entre as ações dos jogadores e manter um Dossiê de Inteligência impecável e SEMPRE ATUALIZADO.
 
         ESTADO ANTERIOR DO MUNDO:
         ${contextoPassado}
 
-        NOVOS FATOS (Observe os carimbos de "Escala" e "ALERTA DE EFEITO BORBOLETA"):
+        NOVOS FATOS (Relatórios recentes da inteligência):
         ${JSON.stringify(novosFatos)}
 
-        DIRETRIZES DE EDIÇÃO (O Faro Jornalístico e a Sobriedade):
-        1. TOM IMPARCIAL E SÓBRIO: Seja pé no chão, analítica e estritamente jornalística. NÃO SEJA ALARMISTA. Não exagere a gravidade das situações, não crie pânico desnecessário e evite adjetivos sensacionalistas.
-        2. FIDELIDADE AOS FATOS (MUITO IMPORTANTE): Respeite as nuances das notícias originais. Se uma nação impôs uma regra com exceções ou avisos prévios, INCLUA essa informação. Não omita detalhes para fazer uma nação parecer "vilã" ou "heroína". Ater-se aos fatos relatados.
-        3. CRUZAMENTO DE DADOS: Conecte os fatos se várias nações falarem do mesmo assunto, mas mantenha a objetividade: "Fontes apontam que...", "A medida coincide com...".
-        4. DIAGRAMAÇÃO (SUBTÍTULOS): Separe as notícias distintas dentro de cada categoria usando subtítulos. Para isso, use EXATAMENTE esta tag HTML para os títulos (USE ASPAS SIMPLES): <h4 class='font-extrabold text-xl mt-6 mb-2 text-stone-800 border-b border-stone-300'>SEU SUBTÍTULO AQUI</h4> seguido do texto da notícia em formato normal.
-        5. REGRA DE OURO DO FORMATO: NUNCA use aspas duplas (") dentro dos textos das notícias. Se precisar citar algo, use aspas simples (').
+        DIRETRIZES DE REDAÇÃO (O Faro Jornalístico):
+        1. TOM IMPARCIAL E SÓBRIO: Escreva como uma analista geopolítica veterana. Seja fria, analítica e pé no chão. Evite sensacionalismo barato, mas destaque a gravidade real de guerras, embargos ou mudanças de poder.
+        2. FIDELIDADE ABSOLUTA: Respeite as nuances das notícias originais. Se há exceções em uma lei ou condições para um ataque, cite-as. NUNCA invente atritos, guerras ou alianças que não estejam explicitamente nos fatos.
+        3. CRUZAMENTO DE DADOS (A Mágica): Se a Nação A bloqueou o mar e a Nação B relata fome, conecte os fatos na matéria de forma analítica: 'A recente medida da Nação A já mostra impactos severos na Nação B...'.
+        4. DIAGRAMAÇÃO (SUBTÍTULOS): Separe as notícias dentro de cada categoria (Política, Economia, Conflitos). Use EXATAMENTE esta tag HTML para os títulos, COM ASPAS SIMPLES: <h4 class='font-extrabold text-xl mt-6 mb-2 text-stone-800 border-b border-stone-300'>SEU SUBTÍTULO AQUI</h4>
+        5. REGRA ANTI-CRASH (FORMATAÇÃO DE TEXTO): NUNCA, SOB NENHUMA HIPÓTESE, use aspas duplas (") dentro dos textos das notícias ou do dossiê. Substitua absolutamente todas as aspas por aspas simples (').
 
-        TAREFAS:
-        1. JORNAL: Escreva a narrativa cruzando as informações. Use a tag de subtítulo (h4) que te ensinei para separar os assuntos dentro de Política, Economia e Conflitos. Nunca invente atritos que não foram citados.
-        2. MEMÓRIA: Atualize o dossiê. Registre fatos concretos e literais.
+        TAREFAS OBRIGATÓRIAS:
+        1. O JORNAL: Escreva a edição cruzando as informações. Divida nos 4 cadernos. Se um caderno não tiver notícias relevantes nesta edição, escreva: '<p class='text-stone-500 italic'>Sem movimentações de destaque reportadas por nossa inteligência nesta edição.</p>'
+        2. O DOSSIÊ (ATUALIZAÇÃO DE MEMÓRIA): Esta é a engrenagem principal do jogo. Você deve FUNDIR o 'Estado Anterior' com os 'Novos Fatos'. 
+           - Se uma nação já existia no dossiê, SUBSTITUA as informações antigas pelas novas. Se ela estava em paz e agora atacou, a ficha DEVE refletir a guerra imediatamente.
+           - Se uma nação for mencionada pela primeira vez, CRIE a ficha detalhada dela.
+           - O objetivo é que o Dossiê reflita exclusivamente o "Aqui e Agora" do mundo, apagando tensões velhas que já foram resolvidas e destacando as novas.
 
-        Retorne EXATAMENTE este JSON puro (sem marcadores de markdown):
+        Retorne EXATAMENTE este JSON puro (sem marcações markdown como \`\`\`json):
         {
           "jornal_html": {
-            "destaques": "...",
-            "politica": "...",
-            "economia": "...",
-            "conflitos": "..."
+            "destaques": "Resumo dos acontecimentos mais chocantes e de impacto global...",
+            "politica": "Diplomacia, leis, eleições, traições, discursos...",
+            "economia": "Recursos, embargos, infraestrutura, comércio...",
+            "conflitos": "Movimentações de tropas, batalhas, espionagem, ameaças..."
           },
           "novo_estado_mundo": {
             "nacoes_fichadas": [
               {
-                "nome_nacao": "Nome da Nação",
-                "situacao_interna": "O que está acontecendo dentro dela",
-                "postura_externa": "Ações diplomáticas, fronteiras, conflitos"
+                "nome_nacao": "Nome Exato da Nação",
+                "situacao_interna": "Economia, estabilidade do governo, moral do povo (atualizado).",
+                "postura_externa": "Alianças, inimizades, guerras ativas e diplomacia (atualizado)."
               }
             ],
-            "tensoes_globais_ativas": ["Fato 1", "Fato 2"],
-            "resumo_narrativo": "..."
+            "tensoes_globais_ativas": ["Fato latente 1", "Fato latente 2"],
+            "resumo_narrativo": "Um parágrafo resumindo o clima do mundo após esta edição."
           },
-          "conexoes_detectadas": ["Explique brevemente as conexões que você fez entre as nações nesta edição"]
+          "conexoes_detectadas": ["Explique brevemente as conexões secretas que você fez entre as nações para os registros do Mestre."]
         }`;
 
         const result = await model.generateContent(prompt);
