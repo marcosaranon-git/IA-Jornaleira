@@ -16,7 +16,7 @@ app.get('/api/ping', (req, res) => {
 const { fecharEdicaoJornal } = require('./workers/fecharEdicao');
 
 // ⚠️ ATENÇÃO AQUI: Troque "NOME_DO_SEU_ARQUIVO" pelo nome real do seu arquivo!
-const { processarTextosPendentes } = require('./workers/NOME_DO_SEU_ARQUIVO');
+const { processarTextosPendentes } = require('./workers/processaTexto');
 
 // ==========================================
 // ROTAS DE CHOQUE (BOTÕES DE PÂNICO)
