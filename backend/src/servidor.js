@@ -89,7 +89,7 @@ cron.schedule('0 0 */2 * *', () => {
 
 // ⚠️ Despertador da Porteira: Vai rodar a cada 5 minutos para processar o que o Bot receber
 // Descomente quando souber o nome da função:
-// cron.schedule('*/5 * * * *', () => {
-//   console.log("🚪 Checando gaveta de manuscritos...");
-//   suaFuncaoDeProcessar();
-// });
+cron.schedule('*/5 * * * *', () => {
+    console.log("🚪 Checando gaveta de manuscritos...");
+    suaFuncaoDeProcessar();
+ });
