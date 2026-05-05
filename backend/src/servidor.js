@@ -15,10 +15,8 @@ app.get('/api/ping', (req, res) => {
 // ==========================================
 const { fecharEdicaoJornal } = require('./workers/fecharEdicao');
 
-// ⚠️ ATENÇÃO AQUI: Importe o arquivo que faz o processamento dos manuscritos! 
-// Se estiver na pasta workers e se chamar algo como "processarEntradas.js", ficaria assim:
-// const { suaFuncaoDeProcessar } = require('./workers/nomeDoSeuArquivo');
-
+// ⚠️ ATENÇÃO AQUI: Troque "NOME_DO_SEU_ARQUIVO" pelo nome real do seu arquivo!
+const { processarTextosPendentes } = require('./workers/NOME_DO_SEU_ARQUIVO');
 
 // ==========================================
 // ROTAS DE CHOQUE (BOTÕES DE PÂNICO)
@@ -28,8 +26,7 @@ const { fecharEdicaoJornal } = require('./workers/fecharEdicao');
 app.get('/api/forcar-porteira', async (req, res) => {
     console.log("🚪 Dando um choque na Porteira para processar a fila!");
     try {
-        // ⚠️ ATENÇÃO: Descomente a linha abaixo e troque pelo nome da sua função!
-        // suaFuncaoDeProcessar(); 
+        processarTextosPendentes(); // Nome corrigido e ativado!
         
         res.status(200).send("A Porteira foi acordada e está processando! Olhe os logs do Render.");
     } catch (erro) {
@@ -87,9 +84,8 @@ cron.schedule('0 0 */2 * *', () => {
   fecharEdicaoJornal();
 });
 
-// ⚠️ Despertador da Porteira: Vai rodar a cada 5 minutos para processar o que o Bot receber
-// Descomente quando souber o nome da função:
+// Despertador da Porteira: Vai rodar a cada 5 minutos
 cron.schedule('*/5 * * * *', () => {
     console.log("🚪 Checando gaveta de manuscritos...");
-    suaFuncaoDeProcessar();
- });
+    processarTextosPendentes(); // Nome corrigido!
+});
