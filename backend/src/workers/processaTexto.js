@@ -25,6 +25,7 @@ async function processarTextosPendentes() {
             generationConfig: { responseMimeType: "application/json" }
         });
 
+        // PROMPT ATUALIZADO COM A REGRA ANTI-CRASH
         const prompt = `Você é a Porteira de um jornal de RPG de geopolítica. 
         Analise o texto da nação "${nomeNacao}": "${entrada.original_text}"
 
@@ -33,8 +34,9 @@ async function processarTextosPendentes() {
            - "escala": É uma questão "Interna", "Regional" (envolve vizinhos) ou "Global"?
            - "efeito_borboleta": (true/false) Isso ameaça a paz, muda o equilíbrio de poder, cria precedentes graves ou vai forçar outros jogadores a reagirem?
         3. Ignore detalhes triviais do dia a dia. Foque naquilo que move a história do mundo.
+        4. REGRA DE OURO DO FORMATO: NUNCA use aspas duplas (") dentro dos textos das notícias. Se precisar citar algo, use aspas simples (').
 
-        Retorne EXATAMENTE um JSON assim:
+        Retorne EXATAMENTE este JSON puro (sem marcadores de markdown):
         {
           "resumo_geral": "...",
           "segmentos": [
@@ -48,10 +50,13 @@ async function processarTextosPendentes() {
         }`;
 
         const result = await model.generateContent(prompt);
-        const respostaIA = result.response.text();
+        
+        // 🧹 A GRANDE FAXINA: Limpa lixos e markdown antes de ler o JSON
+        let textoCru = result.response.text();
+        textoCru = textoCru.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
-        // Lemos o JSON novo
-        const analise = JSON.parse(respostaIA);
+        // Agora o JSON vai ser lido com segurança absoluta
+        const analise = JSON.parse(textoCru);
         console.log(`✅ IA gerou o resumo geral e encontrou ${analise.segmentos.length} segmento(s).`);
 
         // 1. Salva na tabela geral (Apenas o resumo)
@@ -104,5 +109,4 @@ async function processarTextosPendentes() {
     }
 }
 
-// Exportando a função para o servidor poder chamar!
 module.exports = { processarTextosPendentes };
