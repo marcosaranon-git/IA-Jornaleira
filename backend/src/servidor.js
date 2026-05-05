@@ -1,4 +1,5 @@
 require('dotenv').config(); 
+const { ligarBot } = require('./bot');
 const express = require('express');
 const cors = require('cors'); // Puxando o CORS
 const app = express();
@@ -38,6 +39,8 @@ app.get('/api/journals', listarTodosJornais);
 app.get('/api/world-state', obterDossieAtual);
 
 const PORT = process.env.PORT || 3333;
+
+ligarBot();
 
 app.listen(PORT, () => {
     console.log(`\n🚀 Servidor do Jornal RPG escutando na porta ${PORT}`);
