@@ -21,14 +21,20 @@ client.on('messageCreate', async (message) => {
 
     // O Comando Mágico será: !noticia Nome da Nação | Texto do acontecimento
     if (message.content.startsWith('!noticia')) {
-        const partes = message.content.replace('!noticia', '').split('|');
+        // Tira o comando inicial
+        const mensagemLimpa = message.content.replace('!noticia', '').trim();
+        
+        // Acha a posição exata da PRIMEIRA barra vertical
+        const indiceCorte = mensagemLimpa.indexOf('|');
 
-        if (partes.length < 2) {
+        // Se não tiver nenhuma barra, avisa do erro
+        if (indiceCorte === -1) {
             return message.reply("⚠️ **Formato incorreto!**\nUse: `!noticia Nome da Nação | Texto do que aconteceu`\nExemplo: `!noticia Japão | O império declarou embargo.`");
         }
 
-        const nomeNacao = partes[0].trim();
-        const textoFato = partes[1].trim();
+        // Pega tudo ANTES da primeira barra como Nome, e tudo DEPOIS como Texto!
+        const nomeNacao = mensagemLimpa.substring(0, indiceCorte).trim();
+        const textoFato = mensagemLimpa.substring(indiceCorte + 1).trim();
         const discordId = message.author.id;
 
         try {
@@ -47,7 +53,7 @@ client.on('messageCreate', async (message) => {
             const { error: erroInsert } = await supabase.from('raw_entries').insert([{
                 author_id: autor.id,
                 discord_message_id: message.id,
-                original_text: textoFato,
+                original_text: textoFato, // <-- Agora o texto vai completinho!
                 status: 'pending'
             }]);
 
@@ -55,11 +61,11 @@ client.on('messageCreate', async (message) => {
 
             // Reage e avisa que deu tudo certo!
             message.react('📜');
-            message.reply(`✅ Manuscrito de **${nomeNacao}** entregue com sucesso à Redação de Carmesim!`);
+            message.reply(`✅ Manuscrito de **${nomeNacao}** entregue com sucesso à Redação da IA Jornaleira!`);
 
         } catch (erro) {
             console.error("Erro ao salvar notícia do bot:", erro);
-            message.reply("❌ O corvo se perdeu no caminho. Ocorreu um erro ao tentar arquivar o manuscrito. Avise o Mestre.");
+            message.reply("❌ O corvo se perdeu no caminho. Ocorreu um erro ao tentar arquivar o manuscrito. Avise o LUC ou o Jasper.");
         }
     }
 });
