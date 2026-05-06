@@ -21,7 +21,7 @@ async function processarTextosPendentes() {
         console.log(`🤖 IA Porteira lendo a notícia enviada por: ${nomeNacao}`);
 
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-2.5-flash-Lite",
+            model: "gemini-2.5-flash-lite",
             generationConfig: { responseMimeType: "application/json" }
         });
 
