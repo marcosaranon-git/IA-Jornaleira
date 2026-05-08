@@ -1,9 +1,10 @@
 const supabase = require('../infra/supabase');
 const genAI = require('../infra/gemini');
 
-async function gerarComRetry(prompt, tentativas = 3) {
+// 🛡️ MOTOR BLINDADO COM CÂMERA DE SEGURANÇA
+async function gerarComRetry(prompt, nomeTarefa, tentativas = 3) {
     const model = genAI.getGenerativeModel({ 
-        model: "gemini-2.5-flash",
+        model: "gemini-1.5-flash",
         generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
         safetySettings: [
             { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
@@ -17,29 +18,40 @@ async function gerarComRetry(prompt, tentativas = 3) {
         try {
             const result = await model.generateContent(prompt);
             let textoCru = result.response.text();
-
+            
+            // Faxina
             textoCru = textoCru.replace(/```json\n?/g, '').replace(/```\n?/g, '');
             textoCru = textoCru.replace(/\n/g, ' ').trim(); 
 
-            return JSON.parse(textoCru);
+            // Câmera de Segurança: Tenta ler o JSON. Se falhar, captura a cena do crime.
+            try {
+                return JSON.parse(textoCru);
+            } catch (erroJson) {
+                console.log(`\n🎥 [CÂMERA DE SEGURANÇA - ${nomeTarefa}] Falha na leitura do JSON!`);
+                console.log(`Olhe o final do texto gerado para ver onde cortou:`);
+                console.log(textoCru.slice(-250)); // Mostra os últimos 250 caracteres
+                throw erroJson; // Joga o erro para forçar a nova tentativa
+            }
+
         } catch (erro) {
-            console.log(`Falha na IA (Tentativa ${i}/${tentativas}). Corrigindo...`);
-            if (i === tentativas) throw new Error("Falha critica apos 3 tentativas.");
+            console.log(`⚠️ ${nomeTarefa} engasgou (Tentativa ${i}/${tentativas}). O Motor está corrigindo...`);
+            if (i === tentativas) throw new Error(`Falha critica em ${nomeTarefa} apos 3 tentativas.`);
         }
     }
 }
 
 async function fecharEdicaoJornal() {
-    console.log("Iniciando fechamento da edicao e atualizacao de memoria...");
+    console.log("🛠️ Iniciando fechamento: Redação e Arquivo trabalhando separadamente...");
 
     try {
+        // 1. Pega os fatos no banco
         const { data: segmentosBrutos, error: erroSegmentos } = await supabase
             .from('entry_segments')
             .select(`segment_text, categories ( name ), processed_entries!inner (is_used, raw_entries (authors ( name )))`)
             .eq('processed_entries.is_used', false);
 
         if (erroSegmentos || !segmentosBrutos || segmentosBrutos.length === 0) {
-            console.log("Nada de novo para publicar hoje.");
+            console.log("😴 Nada de novo para publicar hoje.");
             return;
         }
 
@@ -49,6 +61,7 @@ async function fecharEdicaoJornal() {
             texto: seg.segment_text
         }));
 
+        // 2. Pega a memória antiga
         const { data: memoriaAntiga } = await supabase
             .from('world_memory')
             .select('state_json')
@@ -58,74 +71,89 @@ async function fecharEdicaoJornal() {
 
         const contextoPassado = memoriaAntiga ? JSON.stringify(memoriaAntiga.state_json) : "O mundo comecou agora.";
 
-        const prompt = `Você é a Editora Chefe do jornal geopolitico "Cronicas de Carmesim".
-
-        ESTADO ANTERIOR DO MUNDO:
-        ${contextoPassado}
-
-        NOVOS FATOS:
-        ${JSON.stringify(novosFatos)}
-
-        DIRETRIZES DE REDACAO:
-        1. TOM IMPARCIAL E SOBRIO: Escreva como uma analista veterana.
-        2. FIDELIDADE ABSOLUTA: Respeite as noticias. Nunca invente atritos.
-        3. CRUZAMENTO DE DADOS: Conecte os fatos de forma analitica.
-        4. PROIBIDO USAR HTML: Escreva APENAS texto puro. Nenhuma tag html.
-        5. SEJA CONCISA NO DOSSIE: Resuma a situacao interna e postura externa de cada nacao em NO MAXIMO 3 FRASES.
-
-        Retorne EXATAMENTE este JSON puro:
+        // ==========================================
+        // 📰 TAREFA 1: ESCREVER O JORNAL
+        // ==========================================
+        console.log("📝 TAREFA 1: Redação escrevendo as notícias...");
+        
+        const promptJornal = `Você é a Editora do jornal "Cronicas de Carmesim".
+        Baseado nestes NOVOS FATOS: ${JSON.stringify(novosFatos)}
+        
+        Escreva as noticias da edicao de forma sobria, imparcial e sem inventar dados.
+        PROIBIDO USAR HTML. Escreva apenas texto puro. Use aspas simples (') em vez de duplas (").
+        
+        Retorne EXATAMENTE este JSON:
         {
-          "jornal_textos": {
-            "destaques": "Resumo em texto puro dos destaques...",
-            "politica": "Resumo em texto puro sobre politica...",
-            "economia": "Resumo em texto puro sobre economia...",
-            "conflitos": "Resumo em texto puro sobre conflitos..."
-          },
-          "novo_estado_mundo": {
-            "nacoes_fichadas": [
-              {
-                "nome_nacao": "Nome da Nacao",
-                "situacao_interna": "Resumo de ate 3 frases.",
-                "postura_externa": "Resumo de ate 3 frases."
-              }
-            ],
-            "tensoes_globais_ativas": ["Fato 1", "Fato 2"],
-            "resumo_narrativo": "Resumo do clima mundial."
-          },
-          "conexoes_detectadas": ["Conexoes secretas."]
+            "destaques": "Paragrafo texto puro com a noticia mais chocante.",
+            "politica": "Paragrafo texto puro de politica.",
+            "economia": "Paragrafo texto puro de economia.",
+            "conflitos": "Paragrafo texto puro de conflitos."
         }`;
 
-        const resposta = await gerarComRetry(prompt);
+        const dadosJornal = await gerarComRetry(promptJornal, "GERAÇÃO DO JORNAL");
+
+        // ==========================================
+        // 🗃️ TAREFA 2: ATUALIZAR O DOSSIÊ
+        // ==========================================
+        console.log("🧠 TAREFA 2: Arquivo atualizando o dossiê das Nações...");
+
+        const promptDossie = `Você é o Arquivista Mestre do "Cronicas de Carmesim".
+        ESTADO ANTERIOR DO MUNDO: ${contextoPassado}
+        NOVOS FATOS: ${JSON.stringify(novosFatos)}
+
+        Atualize o estado do mundo fundindo os fatos novos com o estado anterior. 
+        MUITO IMPORTANTE: Resuma a situacao_interna e postura_externa de cada nacao em NO MAXIMO 2 FRASES CURTAS. Seja extremamente conciso para economizar espaço. Use aspas simples (').
+        
+        Retorne EXATAMENTE este JSON:
+        {
+          "nacoes_fichadas": [
+            {
+              "nome_nacao": "Nome da Nacao",
+              "situacao_interna": "Resumo muito curto (2 frases max).",
+              "postura_externa": "Resumo muito curto (2 frases max)."
+            }
+          ],
+          "tensoes_globais_ativas": ["Fato 1", "Fato 2"],
+          "resumo_narrativo": "Resumo curto do clima mundial."
+        }`;
+
+        const dadosDossie = await gerarComRetry(promptDossie, "ATUALIZAÇÃO DO DOSSIÊ");
+
+        // ==========================================
+        // 🚀 TAREFA 3: MONTAGEM E SALVAMENTO
+        // ==========================================
+        console.log("⚙️ TAREFA 3: Diagramando e salvando no banco...");
 
         const classeHTML = "font-extrabold text-xl mt-6 mb-2 text-stone-800 border-b border-stone-300";
         const jornalFinalHTML = {
-            destaques: `<h4 class='${classeHTML}'>Destaques Globais</h4><p>${resposta.jornal_textos.destaques}</p>`,
-            politica: `<h4 class='${classeHTML}'>Cenario Politico</h4><p>${resposta.jornal_textos.politica}</p>`,
-            economia: `<h4 class='${classeHTML}'>Movimentacoes Economicas</h4><p>${resposta.jornal_textos.economia}</p>`,
-            conflitos: `<h4 class='${classeHTML}'>Relatorios de Conflito</h4><p>${resposta.jornal_textos.conflitos}</p>`
+            destaques: `<h4 class='${classeHTML}'>Destaques Globais</h4><p>${dadosJornal.destaques}</p>`,
+            politica: `<h4 class='${classeHTML}'>Cenario Politico</h4><p>${dadosJornal.politica}</p>`,
+            economia: `<h4 class='${classeHTML}'>Movimentacoes Economicas</h4><p>${dadosJornal.economia}</p>`,
+            conflitos: `<h4 class='${classeHTML}'>Relatorios de Conflito</h4><p>${dadosJornal.conflitos}</p>`
         };
 
-        const { data: novoJornal, error: erroJornal } = await supabase
+        // Salva Jornal
+        const { error: erroJornal } = await supabase
             .from('journals')
-            .insert([{ pdf_url: null, content: jornalFinalHTML }])
-            .select()
-            .single();
-            
+            .insert([{ pdf_url: null, content: jornalFinalHTML }]);
         if(erroJornal) throw erroJornal;
 
-        await supabase
+        // Salva Memória
+        const { error: erroMemoria } = await supabase
             .from('world_memory')
-            .insert([{ state_json: resposta.novo_estado_mundo }]);
+            .insert([{ state_json: dadosDossie }]);
+        if(erroMemoria) throw erroMemoria;
 
+        // Limpeza
         await supabase
             .from('processed_entries')
             .update({ is_used: true })
             .eq('is_used', false);
 
-        console.log("Edicao finalizada com sucesso!");
+        console.log("✅ CRÔNICAS DE CARMESIM PUBLICADO COM SUCESSO ABSOLUTO!");
 
     } catch (erro) {
-        console.error("Erro no fechamento da edicao:", erro.message);
+        console.error("❌ ERRO FATAL NO FECHAMENTO:", erro.message);
     }
 }
 
