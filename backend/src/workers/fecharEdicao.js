@@ -46,7 +46,7 @@ async function fecharEdicaoJornal() {
 
         // 🚨 MUDANÇA 1: Desligando a "Censura" para permitir narrativas de guerra e política
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-pro",
+            model: "gemini-2.5-flash",
             generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
             safetySettings: [
                 { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
