@@ -1,38 +1,54 @@
 const supabase = require('../infra/supabase');
 const genAI = require('../infra/gemini');
 
+async function gerarComRetry(prompt, tentativas = 3) {
+    const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
+        safetySettings: [
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        ]
+    });
+
+    for (let i = 1; i <= tentativas; i++) {
+        try {
+            const result = await model.generateContent(prompt);
+            let textoCru = result.response.text();
+
+            textoCru = textoCru.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+            textoCru = textoCru.replace(/\n/g, ' ').trim(); 
+
+            return JSON.parse(textoCru);
+        } catch (erro) {
+            console.log(`Falha na IA (Tentativa ${i}/${tentativas}). Corrigindo...`);
+            if (i === tentativas) throw new Error("Falha critica apos 3 tentativas.");
+        }
+    }
+}
+
 async function fecharEdicaoJornal() {
-    console.log("🛠️ Iniciando fechamento da edição e atualização de memória...");
+    console.log("Iniciando fechamento da edicao e atualizacao de memoria...");
 
     try {
-        // 1. Pega os segmentos
         const { data: segmentosBrutos, error: erroSegmentos } = await supabase
             .from('entry_segments')
-            .select(`
-                segment_text,
-                categories ( name ),
-                processed_entries!inner (
-                    is_used,
-                    raw_entries (
-                        authors ( name )
-                    )
-                )
-            `)
+            .select(`segment_text, categories ( name ), processed_entries!inner (is_used, raw_entries (authors ( name )))`)
             .eq('processed_entries.is_used', false);
 
         if (erroSegmentos || !segmentosBrutos || segmentosBrutos.length === 0) {
-            console.log("😴 Nada de novo para publicar hoje.");
+            console.log("Nada de novo para publicar hoje.");
             return;
         }
 
-        // 1.5 Limpa os dados
         const novosFatos = segmentosBrutos.map(seg => ({
             nacao: seg.processed_entries.raw_entries.authors.name,
             categoria: seg.categories.name,
             texto: seg.segment_text
         }));
 
-        // 2. Pega a última memória do mundo salva
         const { data: memoriaAntiga } = await supabase
             .from('world_memory')
             .select('state_json')
@@ -40,106 +56,76 @@ async function fecharEdicaoJornal() {
             .limit(1)
             .single();
 
-        const contextoPassado = memoriaAntiga ? JSON.stringify(memoriaAntiga.state_json) : "Nenhuma memória anterior. O mundo começou agora.";
+        const contextoPassado = memoriaAntiga ? JSON.stringify(memoriaAntiga.state_json) : "O mundo comecou agora.";
 
-        console.log("🧠 Consultando a memória do mundo e redigindo dossiê detalhado...");
-
-        // 🚨 MUDANÇA 1: Desligando a "Censura" para permitir narrativas de guerra e política
-        const model = genAI.getGenerativeModel({ 
-            model: "gemini-2.5-flash",
-            generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
-            safetySettings: [
-                { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-                { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-                { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-                { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-            ]
-        });
-
-        // Prompt para a IA
-        const prompt = `Você é a Editora Chefe, Analista de Inteligência e Arquivista Mestre do jornal geopolítico "Crônicas de Carmesim" (Sistema Exotic RPG).
-        Seu trabalho é transformar relatos brutos em matérias jornalísticas coesas, conectar pontos cegos entre as ações dos jogadores e manter um Dossiê de Inteligência impecável e SEMPRE ATUALIZADO.
+        const prompt = `Você é a Editora Chefe do jornal geopolitico "Cronicas de Carmesim".
 
         ESTADO ANTERIOR DO MUNDO:
         ${contextoPassado}
 
-        NOVOS FATOS (Relatórios recentes da inteligência):
+        NOVOS FATOS:
         ${JSON.stringify(novosFatos)}
 
-        DIRETRIZES DE REDAÇÃO (O Faro Jornalístico):
-        1. TOM IMPARCIAL E SÓBRIO: Escreva como uma analista geopolítica veterana. Seja fria, analítica e pé no chão. Evite sensacionalismo barato, mas destaque a gravidade real de guerras, embargos ou mudanças de poder.
-        2. FIDELIDADE ABSOLUTA: Respeite as nuances das notícias originais. Se há exceções em uma lei ou condições para um ataque, cite-as. NUNCA invente atritos, guerras ou alianças que não estejam explicitamente nos fatos.
-        3. CRUZAMENTO DE DADOS (A Mágica): Se a Nação A bloqueou o mar e a Nação B relata fome, conecte os fatos na matéria de forma analítica: 'A recente medida da Nação A já mostra impactos severos na Nação B...'.
-        4. DIAGRAMAÇÃO (SUBTÍTULOS): Separe as notícias dentro de cada categoria (Política, Economia, Conflitos). Use EXATAMENTE esta tag HTML para os títulos, COM ASPAS SIMPLES: <h4 class='font-extrabold text-xl mt-6 mb-2 text-stone-800 border-b border-stone-300'>SEU SUBTÍTULO AQUI</h4>
-        5. REGRA ANTI-CRASH (FORMATAÇÃO DE TEXTO): NUNCA, SOB NENHUMA HIPÓTESE, use aspas duplas (") dentro dos textos das notícias ou do dossiê. Substitua absolutamente todas as aspas por aspas simples (').
-        6. SEJA CONCISA NO DOSSIÊ (MUITO IMPORTANTE): O mundo está enorme. Para o Dossiê não ficar gigantesco, resuma a 'situacao_interna' e a 'postura_externa' de CADA nação em NO MÁXIMO 3 FRASES CURTAS E DIRETAS. Seja cirúrgica.
+        DIRETRIZES DE REDACAO:
+        1. TOM IMPARCIAL E SOBRIO: Escreva como uma analista veterana.
+        2. FIDELIDADE ABSOLUTA: Respeite as noticias. Nunca invente atritos.
+        3. CRUZAMENTO DE DADOS: Conecte os fatos de forma analitica.
+        4. PROIBIDO USAR HTML: Escreva APENAS texto puro. Nenhuma tag html.
+        5. SEJA CONCISA NO DOSSIE: Resuma a situacao interna e postura externa de cada nacao em NO MAXIMO 3 FRASES.
 
-        TAREFAS OBRIGATÓRIAS:
-        1. O JORNAL: Escreva a edição cruzando as informações. Divida nos 4 cadernos. Se um caderno não tiver notícias relevantes nesta edição, escreva: '<p class='text-stone-500 italic'>Sem movimentações de destaque reportadas por nossa inteligência nesta edição.</p>'
-        2. O DOSSIÊ (ATUALIZAÇÃO DE MEMÓRIA): Esta é a engrenagem principal do jogo. Você deve FUNDIR o 'Estado Anterior' com os 'Novos Fatos'. 
-            - Se uma nação já existia no dossiê, SUBSTITUA as informações antigas pelas novas. Se ela estava em paz e agora atacou, a ficha DEVE refletir a guerra imediatamente.
-            - Se uma nação for mencionada pela primeira vez, CRIE a ficha detalhada dela.
-            - O objetivo é que o Dossiê reflita exclusivamente o "Aqui e Agora" do mundo, apagando tensões velhas que já foram resolvidas e destacando as novas.
-
-        Retorne EXATAMENTE este JSON puro (sem marcações markdown como \`\`\`json):
+        Retorne EXATAMENTE este JSON puro:
         {
-          "jornal_html": {
-            "destaques": "Resumo dos acontecimentos mais chocantes e de impacto global...",
-            "politica": "Diplomacia, leis, eleições, traições, discursos...",
-            "economia": "Recursos, embargos, infraestrutura, comércio...",
-            "conflitos": "Movimentações de tropas, batalhas, espionagem, ameaças..."
+          "jornal_textos": {
+            "destaques": "Resumo em texto puro dos destaques...",
+            "politica": "Resumo em texto puro sobre politica...",
+            "economia": "Resumo em texto puro sobre economia...",
+            "conflitos": "Resumo em texto puro sobre conflitos..."
           },
           "novo_estado_mundo": {
             "nacoes_fichadas": [
               {
-                "nome_nacao": "Nome Exato da Nação",
-                "situacao_interna": "Economia, estabilidade do governo, moral do povo (atualizado).",
-                "postura_externa": "Alianças, inimizades, guerras ativas e diplomacia (atualizado)."
+                "nome_nacao": "Nome da Nacao",
+                "situacao_interna": "Resumo de ate 3 frases.",
+                "postura_externa": "Resumo de ate 3 frases."
               }
             ],
-            "tensoes_globais_ativas": ["Fato latente 1", "Fato latente 2"],
-            "resumo_narrativo": "Um parágrafo resumindo o clima do mundo após esta edição."
+            "tensoes_globais_ativas": ["Fato 1", "Fato 2"],
+            "resumo_narrativo": "Resumo do clima mundial."
           },
-          "conexoes_detectadas": ["Explique brevemente as conexões secretas que você fez entre as nações para os registros do Mestre."]
+          "conexoes_detectadas": ["Conexoes secretas."]
         }`;
 
-        const result = await model.generateContent(prompt);
-        
-        // 🚨 MUDANÇA 2: A GRANDE FAXINA SUPREMA
-        let textoCru = result.response.text();
-        textoCru = textoCru.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-        textoCru = textoCru.replace(/\n/g, ' ').trim(); 
+        const resposta = await gerarComRetry(prompt);
 
-        // 🎥 CÂMERA DE SEGURANÇA NO FINAL DO TEXTO
-        let resposta;
-        try {
-            resposta = JSON.parse(textoCru);
-        } catch (erroJson) {
-            console.error("🚨 A IA não conseguiu fechar o pacote JSON!");
-            console.error("Olhe as últimas 300 letras para ver onde a tinta acabou:");
-            console.error(textoCru.slice(-300)); // Mostra o exato final do texto
-            throw erroJson; // Joga o erro para parar o processo
-        }
+        const classeHTML = "font-extrabold text-xl mt-6 mb-2 text-stone-800 border-b border-stone-300";
+        const jornalFinalHTML = {
+            destaques: `<h4 class='${classeHTML}'>Destaques Globais</h4><p>${resposta.jornal_textos.destaques}</p>`,
+            politica: `<h4 class='${classeHTML}'>Cenario Politico</h4><p>${resposta.jornal_textos.politica}</p>`,
+            economia: `<h4 class='${classeHTML}'>Movimentacoes Economicas</h4><p>${resposta.jornal_textos.economia}</p>`,
+            conflitos: `<h4 class='${classeHTML}'>Relatorios de Conflito</h4><p>${resposta.jornal_textos.conflitos}</p>`
+        };
 
-        // 4. Salva o Jornal
-        const { data: novoJornal } = await supabase
+        const { data: novoJornal, error: erroJornal } = await supabase
+            .from('journals')
+            .insert([{ pdf_url: null, content: jornalFinalHTML }])
+            .select()
+            .single();
+            
+        if(erroJornal) throw erroJornal;
 
-        // 5. Salva a nova Memória Rica
         await supabase
             .from('world_memory')
             .insert([{ state_json: resposta.novo_estado_mundo }]);
 
-        // 6. Limpeza
         await supabase
             .from('processed_entries')
             .update({ is_used: true })
             .eq('is_used', false);
 
-        console.log("✅ Edição finalizada com Dossiê Geopolítico!");
-        console.log("📝 Nações Fichadas:", resposta.novo_estado_mundo.nacoes_fichadas.map(n => n.nome_nacao).join(', '));
+        console.log("Edicao finalizada com sucesso!");
 
     } catch (erro) {
-        console.error("❌ Erro no fechamento da edição:", erro);
+        console.error("Erro no fechamento da edicao:", erro.message);
     }
 }
 
