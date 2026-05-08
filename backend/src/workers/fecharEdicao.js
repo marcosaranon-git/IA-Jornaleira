@@ -5,7 +5,7 @@ async function fecharEdicaoJornal() {
     console.log("🛠️ Iniciando fechamento da edição e atualização de memória...");
 
     try {
-        // 1. Pega os segmentos e faz um "mergulho" profundo no banco para achar o nome da Nação!
+        // 1. Pega os segmentos
         const { data: segmentosBrutos, error: erroSegmentos } = await supabase
             .from('entry_segments')
             .select(`
@@ -25,7 +25,7 @@ async function fecharEdicaoJornal() {
             return;
         }
 
-        // 1.5 Limpa os dados para a IA não se confundir com a estrutura do banco
+        // 1.5 Limpa os dados
         const novosFatos = segmentosBrutos.map(seg => ({
             nacao: seg.processed_entries.raw_entries.authors.name,
             categoria: seg.categories.name,
@@ -44,9 +44,16 @@ async function fecharEdicaoJornal() {
 
         console.log("🧠 Consultando a memória do mundo e redigindo dossiê detalhado...");
 
+        // 🚨 MUDANÇA 1: Desligando a "Censura" para permitir narrativas de guerra e política
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-2.5-flash",
-            generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
+            model: "gemini-1.5-pro",
+            generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
+            safetySettings: [
+                { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+                { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+                { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+            ]
         });
 
         // Prompt para a IA
@@ -98,13 +105,11 @@ async function fecharEdicaoJornal() {
 
         const result = await model.generateContent(prompt);
         
-        // 🧹 A GRANDE FAXINA
+        // 🚨 MUDANÇA 2: A GRANDE FAXINA SUPREMA
         let textoCru = result.response.text();
-        textoCru = textoCru.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
-        // 🎥 CÂMERA DE SEGURANÇA: Imprime o começo do texto para a gente pegar a IA no pulo
-        console.log("📝 CÂMERA DE SEGURANÇA - Texto bruto gerado pela IA:");
-        console.log(textoCru.substring(0, 2000)); // Imprime os primeiros 2000 caracteres
+        textoCru = textoCru.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+        // Esta linha abaixo amassa todo o texto em uma linha só, destruindo qualquer "Enter" perdido que quebre o JSON
+        textoCru = textoCru.replace(/\n/g, ' ').trim(); 
 
         const resposta = JSON.parse(textoCru);
 
