@@ -1,10 +1,10 @@
 const supabase = require('../infra/supabase');
 const genAI = require('../infra/gemini');
 
-// 🛡️ MOTOR BLINDADO COM CÂMERA DE SEGURANÇA
+// 🛡️ MOTOR BLINDADO
 async function gerarComRetry(prompt, nomeTarefa, tentativas = 3) {
     const model = genAI.getGenerativeModel({ 
-        model: "gemini-2.5-flash",
+        model: "gemini-1.5-flash",
         generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
         safetySettings: [
             { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
@@ -18,19 +18,16 @@ async function gerarComRetry(prompt, nomeTarefa, tentativas = 3) {
         try {
             const result = await model.generateContent(prompt);
             let textoCru = result.response.text();
-            
-            // Faxina
+
             textoCru = textoCru.replace(/```json\n?/g, '').replace(/```\n?/g, '');
             textoCru = textoCru.replace(/\n/g, ' ').trim(); 
 
-            // Câmera de Segurança: Tenta ler o JSON. Se falhar, captura a cena do crime.
             try {
                 return JSON.parse(textoCru);
             } catch (erroJson) {
                 console.log(`\n🎥 [CÂMERA DE SEGURANÇA - ${nomeTarefa}] Falha na leitura do JSON!`);
-                console.log(`Olhe o final do texto gerado para ver onde cortou:`);
-                console.log(textoCru.slice(-250)); // Mostra os últimos 250 caracteres
-                throw erroJson; // Joga o erro para forçar a nova tentativa
+                console.log(`Corte no texto: ${textoCru.slice(-250)}`);
+                throw erroJson; 
             }
 
         } catch (erro) {
@@ -44,7 +41,6 @@ async function fecharEdicaoJornal() {
     console.log("🛠️ Iniciando fechamento: Redação e Arquivo trabalhando separadamente...");
 
     try {
-        // 1. Pega os fatos no banco
         const { data: segmentosBrutos, error: erroSegmentos } = await supabase
             .from('entry_segments')
             .select(`segment_text, categories ( name ), processed_entries!inner (is_used, raw_entries (authors ( name )))`)
@@ -61,7 +57,6 @@ async function fecharEdicaoJornal() {
             texto: seg.segment_text
         }));
 
-        // 2. Pega a memória antiga
         const { data: memoriaAntiga } = await supabase
             .from('world_memory')
             .select('state_json')
@@ -69,15 +64,18 @@ async function fecharEdicaoJornal() {
             .limit(1)
             .single();
 
-        const contextoPassado = memoriaAntiga ? JSON.stringify(memoriaAntiga.state_json) : "O mundo comecou agora.";
+        // 🌟 MUDANÇA ARQUITETURAL: O JavaScript agora segura o estado do mundo na memória dele
+        let estadoMundoObj = { nacoes_fichadas: [], tensoes_globais_ativas: [], resumo_narrativo: "" };
+        if (memoriaAntiga && memoriaAntiga.state_json) {
+            estadoMundoObj = memoriaAntiga.state_json;
+        }
 
         // ==========================================
         // 📰 TAREFA 1: ESCREVER O JORNAL
         // ==========================================
         console.log("📝 TAREFA 1: Redação escrevendo as notícias...");
-        
         const promptJornal = `Você é a Editora do jornal "Cronicas de Carmesim".
-        Baseado nestes NOVOS FATOS: ${JSON.stringify(novosFatos)}
+        NOVOS FATOS: ${JSON.stringify(novosFatos)}
         
         Escreva as noticias da edicao de forma sobria, imparcial e sem inventar dados.
         PROIBIDO USAR HTML. Escreva apenas texto puro. Use aspas simples (') em vez de duplas (").
@@ -93,36 +91,54 @@ async function fecharEdicaoJornal() {
         const dadosJornal = await gerarComRetry(promptJornal, "GERAÇÃO DO JORNAL");
 
         // ==========================================
-        // 🗃️ TAREFA 2: ATUALIZAR O DOSSIÊ
+        // 🗃️ TAREFA 2: ATUALIZAR O DOSSIÊ (MÉTODO DELTA)
         // ==========================================
-        console.log("🧠 TAREFA 2: Arquivo atualizando o dossiê das Nações...");
-
+        console.log("🧠 TAREFA 2: Arquivo calculando apenas as mudanças (Patch Notes)...");
         const promptDossie = `Você é o Arquivista Mestre do "Cronicas de Carmesim".
-        ESTADO ANTERIOR DO MUNDO: ${contextoPassado}
+        ESTADO ANTERIOR DO MUNDO: ${JSON.stringify(estadoMundoObj)}
         NOVOS FATOS: ${JSON.stringify(novosFatos)}
 
-        Atualize o estado do mundo fundindo os fatos novos com o estado anterior. 
-        MUITO IMPORTANTE: Resuma a situacao_interna e postura_externa de cada nacao em NO MAXIMO 2 FRASES CURTAS. Seja extremamente conciso para economizar espaço. Use aspas simples (').
+        Sua tarefa é focar APENAS NAS MUDANÇAS. Analise os 'Novos Fatos' e veja quais nações foram afetadas ou mencionadas.
+        Retorne um JSON contendo APENAS as nações que sofreram alteração ou são novas. Não reescreva as nações que ficaram quietas nesta edição!
+        Resuma a situacao_interna e postura_externa em no MAXIMO 2 frases. Use aspas simples (').
         
         Retorne EXATAMENTE este JSON:
         {
-          "nacoes_fichadas": [
+          "nacoes_atualizadas": [
             {
-              "nome_nacao": "Nome da Nacao",
-              "situacao_interna": "Resumo muito curto (2 frases max).",
-              "postura_externa": "Resumo muito curto (2 frases max)."
+              "nome_nacao": "Nome Exato da Nacao Afetada",
+              "situacao_interna": "Novo resumo curto.",
+              "postura_externa": "Novo resumo curto."
             }
           ],
-          "tensoes_globais_ativas": ["Fato 1", "Fato 2"],
-          "resumo_narrativo": "Resumo curto do clima mundial."
+          "tensoes_globais_ativas": ["Atualize as tensões do mundo inteiro aqui"],
+          "resumo_narrativo": "Resumo curto do novo clima mundial."
         }`;
 
         const dadosDossie = await gerarComRetry(promptDossie, "ATUALIZAÇÃO DO DOSSIÊ");
 
         // ==========================================
-        // 🚀 TAREFA 3: MONTAGEM E SALVAMENTO
+        // 🧩 TAREFA 3: O GRANDE MERGE DE DADOS
         // ==========================================
-        console.log("⚙️ TAREFA 3: Diagramando e salvando no banco...");
+        console.log("🧩 Fundindo o Dossiê antigo com as novas atualizações...");
+
+        if (dadosDossie.nacoes_atualizadas && Array.isArray(dadosDossie.nacoes_atualizadas)) {
+            dadosDossie.nacoes_atualizadas.forEach(nacaoNova => {
+                const index = estadoMundoObj.nacoes_fichadas.findIndex(n => n.nome_nacao === nacaoNova.nome_nacao);
+                if (index !== -1) {
+                    estadoMundoObj.nacoes_fichadas[index] = nacaoNova; // Atualiza se a nação já existe
+                } else {
+                    estadoMundoObj.nacoes_fichadas.push(nacaoNova); // Adiciona se for uma nação nova
+                }
+            });
+        }
+        estadoMundoObj.tensoes_globais_ativas = dadosDossie.tensoes_globais_ativas || [];
+        estadoMundoObj.resumo_narrativo = dadosDossie.resumo_narrativo || "";
+
+        // ==========================================
+        // 🚀 TAREFA 4: MONTAGEM E SALVAMENTO
+        // ==========================================
+        console.log("⚙️ TAREFA 4: Diagramando HTML e salvando no banco de dados...");
 
         const classeHTML = "font-extrabold text-xl mt-6 mb-2 text-stone-800 border-b border-stone-300";
         const jornalFinalHTML = {
@@ -132,19 +148,16 @@ async function fecharEdicaoJornal() {
             conflitos: `<h4 class='${classeHTML}'>Relatorios de Conflito</h4><p>${dadosJornal.conflitos}</p>`
         };
 
-        // Salva Jornal
         const { error: erroJornal } = await supabase
             .from('journals')
             .insert([{ pdf_url: null, content: jornalFinalHTML }]);
         if(erroJornal) throw erroJornal;
 
-        // Salva Memória
         const { error: erroMemoria } = await supabase
             .from('world_memory')
-            .insert([{ state_json: dadosDossie }]);
+            .insert([{ state_json: estadoMundoObj }]); // Salva o mundo fundido perfeitamente
         if(erroMemoria) throw erroMemoria;
 
-        // Limpeza
         await supabase
             .from('processed_entries')
             .update({ is_used: true })
