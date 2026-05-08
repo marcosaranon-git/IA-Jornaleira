@@ -45,7 +45,7 @@ async function fecharEdicaoJornal() {
         console.log("🧠 Consultando a memória do mundo e redigindo dossiê detalhado...");
 
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-pro",
+            model: "gemini-2.5-flash",
             generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
         });
 
