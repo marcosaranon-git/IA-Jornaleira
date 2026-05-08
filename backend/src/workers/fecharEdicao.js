@@ -108,20 +108,21 @@ async function fecharEdicaoJornal() {
         // 🚨 MUDANÇA 2: A GRANDE FAXINA SUPREMA
         let textoCru = result.response.text();
         textoCru = textoCru.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-        // Esta linha abaixo amassa todo o texto em uma linha só, destruindo qualquer "Enter" perdido que quebre o JSON
         textoCru = textoCru.replace(/\n/g, ' ').trim(); 
 
-        const resposta = JSON.parse(textoCru);
+        // 🎥 CÂMERA DE SEGURANÇA NO FINAL DO TEXTO
+        let resposta;
+        try {
+            resposta = JSON.parse(textoCru);
+        } catch (erroJson) {
+            console.error("🚨 A IA não conseguiu fechar o pacote JSON!");
+            console.error("Olhe as últimas 300 letras para ver onde a tinta acabou:");
+            console.error(textoCru.slice(-300)); // Mostra o exato final do texto
+            throw erroJson; // Joga o erro para parar o processo
+        }
 
         // 4. Salva o Jornal
         const { data: novoJornal } = await supabase
-            .from('journals')
-            .insert([{ 
-                pdf_url: null,
-                content: resposta.jornal_html 
-            }])
-            .select()
-            .single();
 
         // 5. Salva a nova Memória Rica
         await supabase
