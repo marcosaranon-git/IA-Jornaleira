@@ -46,7 +46,7 @@ async function fecharEdicaoJornal() {
 
         const model = genAI.getGenerativeModel({ 
             model: "gemini-2.5-flash",
-            generationConfig: { responseMimeType: "application/json" }
+            generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
         });
 
         // Prompt para a IA
@@ -65,6 +65,7 @@ async function fecharEdicaoJornal() {
         3. CRUZAMENTO DE DADOS (A Mágica): Se a Nação A bloqueou o mar e a Nação B relata fome, conecte os fatos na matéria de forma analítica: 'A recente medida da Nação A já mostra impactos severos na Nação B...'.
         4. DIAGRAMAÇÃO (SUBTÍTULOS): Separe as notícias dentro de cada categoria (Política, Economia, Conflitos). Use EXATAMENTE esta tag HTML para os títulos, COM ASPAS SIMPLES: <h4 class='font-extrabold text-xl mt-6 mb-2 text-stone-800 border-b border-stone-300'>SEU SUBTÍTULO AQUI</h4>
         5. REGRA ANTI-CRASH (FORMATAÇÃO DE TEXTO): NUNCA, SOB NENHUMA HIPÓTESE, use aspas duplas (") dentro dos textos das notícias ou do dossiê. Substitua absolutamente todas as aspas por aspas simples (').
+        6. SEJA CONCISA NO DOSSIÊ (MUITO IMPORTANTE): O mundo está enorme. Para o Dossiê não ficar gigantesco, resuma a 'situacao_interna' e a 'postura_externa' de CADA nação em NO MÁXIMO 3 FRASES CURTAS E DIRETAS. Seja cirúrgica.
 
         TAREFAS OBRIGATÓRIAS:
         1. O JORNAL: Escreva a edição cruzando as informações. Divida nos 4 cadernos. Se um caderno não tiver notícias relevantes nesta edição, escreva: '<p class='text-stone-500 italic'>Sem movimentações de destaque reportadas por nossa inteligência nesta edição.</p>'
