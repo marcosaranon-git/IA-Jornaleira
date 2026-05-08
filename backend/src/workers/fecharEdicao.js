@@ -45,7 +45,7 @@ async function fecharEdicaoJornal() {
         console.log("🧠 Consultando a memória do mundo e redigindo dossiê detalhado...");
 
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-2.5-flash",
+            model: "gemini-1.5-pro",
             generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 }
         });
 
@@ -70,9 +70,9 @@ async function fecharEdicaoJornal() {
         TAREFAS OBRIGATÓRIAS:
         1. O JORNAL: Escreva a edição cruzando as informações. Divida nos 4 cadernos. Se um caderno não tiver notícias relevantes nesta edição, escreva: '<p class='text-stone-500 italic'>Sem movimentações de destaque reportadas por nossa inteligência nesta edição.</p>'
         2. O DOSSIÊ (ATUALIZAÇÃO DE MEMÓRIA): Esta é a engrenagem principal do jogo. Você deve FUNDIR o 'Estado Anterior' com os 'Novos Fatos'. 
-           - Se uma nação já existia no dossiê, SUBSTITUA as informações antigas pelas novas. Se ela estava em paz e agora atacou, a ficha DEVE refletir a guerra imediatamente.
-           - Se uma nação for mencionada pela primeira vez, CRIE a ficha detalhada dela.
-           - O objetivo é que o Dossiê reflita exclusivamente o "Aqui e Agora" do mundo, apagando tensões velhas que já foram resolvidas e destacando as novas.
+            - Se uma nação já existia no dossiê, SUBSTITUA as informações antigas pelas novas. Se ela estava em paz e agora atacou, a ficha DEVE refletir a guerra imediatamente.
+            - Se uma nação for mencionada pela primeira vez, CRIE a ficha detalhada dela.
+            - O objetivo é que o Dossiê reflita exclusivamente o "Aqui e Agora" do mundo, apagando tensões velhas que já foram resolvidas e destacando as novas.
 
         Retorne EXATAMENTE este JSON puro (sem marcações markdown como \`\`\`json):
         {
@@ -98,9 +98,13 @@ async function fecharEdicaoJornal() {
 
         const result = await model.generateContent(prompt);
         
-        // 🧹 A GRANDE FAXINA: Limpa blocos markdown e lixos que a IA possa ter mandado antes de transformar em JSON
+        // 🧹 A GRANDE FAXINA
         let textoCru = result.response.text();
         textoCru = textoCru.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+        // 🎥 CÂMERA DE SEGURANÇA: Imprime o começo do texto para a gente pegar a IA no pulo
+        console.log("📝 CÂMERA DE SEGURANÇA - Texto bruto gerado pela IA:");
+        console.log(textoCru.substring(0, 2000)); // Imprime os primeiros 2000 caracteres
 
         const resposta = JSON.parse(textoCru);
 
