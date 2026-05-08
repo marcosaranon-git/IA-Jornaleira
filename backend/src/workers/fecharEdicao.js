@@ -1,7 +1,6 @@
 const supabase = require('../infra/supabase');
 const genAI = require('../infra/gemini');
 
-// MOTOR BLINDADO COM CÂMERA DE SEGURANÇA
 async function gerarComRetry(prompt, nomeTarefa, tentativas = 3) {
     const model = genAI.getGenerativeModel({ 
         model: "gemini-2.5-flash",
@@ -19,27 +18,30 @@ async function gerarComRetry(prompt, nomeTarefa, tentativas = 3) {
             const result = await model.generateContent(prompt);
             let textoCru = result.response.text();
             
-            textoCru = textoCru.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+            const inicio = textoCru.indexOf('{');
+            const fim = textoCru.lastIndexOf('}');
+            if (inicio !== -1 && fim !== -1) {
+                textoCru = textoCru.substring(inicio, fim + 1);
+            }
             textoCru = textoCru.replace(/\n/g, ' ').trim(); 
 
             try {
                 return JSON.parse(textoCru);
             } catch (erroJson) {
-                console.log(`\n🎥 [CÂMERA DE SEGURANÇA - ${nomeTarefa}] Falha na leitura do JSON!`);
-                console.log(`Olhe o final do texto gerado para ver onde cortou:`);
-                console.log(textoCru.slice(-250)); 
+                console.log(`\n🎥 [CÂMERA DE SEGURANÇA - ${nomeTarefa}] Falha na leitura!`);
+                console.log(`Corte no texto: ${textoCru.slice(-250)}`);
                 throw erroJson; 
             }
 
         } catch (erro) {
-            console.log(`⚠️ ${nomeTarefa} engasgou (Tentativa ${i}/${tentativas}). O Motor está corrigindo...`);
+            console.log(`⚠️ ${nomeTarefa} engasgou (Tentativa ${i}/${tentativas}). Corrigindo...`);
             if (i === tentativas) throw new Error(`Falha critica em ${nomeTarefa} apos 3 tentativas.`);
         }
     }
 }
 
 async function fecharEdicaoJornal() {
-    console.log("🛠️ Iniciando fechamento: Redação e Arquivo trabalhando separadamente em lotes...");
+    console.log("🛠️ Iniciando fechamento: Metodo Alvo Fixo ativado...");
 
     try {
         const { data: segmentosBrutos, error: erroSegmentos } = await supabase
@@ -71,106 +73,92 @@ async function fecharEdicaoJornal() {
             if (!estadoAntigoObj.nacoes_fichadas) estadoAntigoObj.nacoes_fichadas = [];
         }
 
-        // ==========================================
-        // 📰 TAREFA 1: ESCREVER O JORNAL
-        // ==========================================
-        console.log("📝 TAREFA 1: Redação escrevendo as notícias...");
+        console.log("📝 TAREFA 1: Redacao escrevendo as noticias do Jornal...");
         
         const promptJornal = `Você é a Editora do jornal "Cronicas de Carmesim".
-        Baseado nestes NOVOS FATOS: ${JSON.stringify(novosFatos)}
+        NOVOS FATOS: ${JSON.stringify(novosFatos)}
         
-        Escreva as noticias da edicao de forma sobria, imparcial e sem inventar dados.
-        PROIBIDO USAR HTML. Escreva apenas texto puro. Use aspas simples (') em vez de duplas (").
+        Escreva as noticias da edicao de forma sobria. PROIBIDO USAR HTML. Use aspas simples (').
         
         Retorne EXATAMENTE este JSON:
         {
-            "destaques": "Paragrafo texto puro com a noticia mais chocante.",
-            "politica": "Paragrafo texto puro de politica.",
-            "economia": "Paragrafo texto puro de economia.",
-            "conflitos": "Paragrafo texto puro de conflitos."
+            "destaques": "Paragrafo com a noticia mais chocante.",
+            "politica": "Paragrafo de politica.",
+            "economia": "Paragrafo de economia.",
+            "conflitos": "Paragrafo de conflitos."
         }`;
 
         const dadosJornal = await gerarComRetry(promptJornal, "GERAÇÃO DO JORNAL");
 
-        // ==========================================
-        // 🗃️ TAREFA 2: ATUALIZAR DOSSIÊ EM LOTES
-        // ==========================================
-        console.log("🧠 TAREFA 2: Preparando lotes de Nações para o Dossiê...");
+        console.log("🧠 TAREFA 2: Atualizando APENAS as nacoes que enviaram noticias...");
 
-        // Coleta todas as nações (antigas e novas) sem repetir
-        const nomesNacoesSet = new Set();
-        estadoAntigoObj.nacoes_fichadas.forEach(n => nomesNacoesSet.add(n.nome_nacao));
-        novosFatos.forEach(f => nomesNacoesSet.add(f.nacao));
-        const todasNacoes = Array.from(nomesNacoesSet);
+        const nacoesAfetadasSet = new Set(novosFatos.map(f => f.nacao));
+        const nacoesAfetadas = Array.from(nacoesAfetadasSet);
+        console.log(`Alvos desta edicao: ${nacoesAfetadas.join(', ')}`);
 
-        // Divide as nações em grupos de 7
         const lotes = [];
-        for (let i = 0; i < todasNacoes.length; i += 7) {
-            lotes.push(todasNacoes.slice(i, i + 7));
+        for (let i = 0; i < nacoesAfetadas.length; i += 5) {
+            lotes.push(nacoesAfetadas.slice(i, i + 5));
         }
 
         let nacoesFichadasAtualizadas = [];
 
         for (let i = 0; i < lotes.length; i++) {
             const loteAtual = lotes[i];
-            console.log(`📦 Processando Lote ${i + 1} de ${lotes.length} (${loteAtual.length} nações)...`);
+            console.log(`📦 Processando Lote ${i + 1} de ${lotes.length} (${loteAtual.length} nacoes)...`);
 
-            // Pega a ficha antiga apenas das nações deste lote para a IA ler
-            const contextoLote = estadoAntigoObj.nacoes_fichadas.filter(n => loteAtual.includes(n.nome_nacao));
+            const fichasAntigasLote = estadoAntigoObj.nacoes_fichadas.filter(n => loteAtual.includes(n.nome_nacao));
+            const fatosLote = novosFatos.filter(f => loteAtual.includes(f.nacao));
 
-            const promptLote = `Você é o Arquivista Mestre.
-            SUA TAREFA EXCLUSIVA: Atualizar APENAS as fichas das seguintes nações: ${loteAtual.join(', ')}.
+            const promptLote = `Atualize o dossie EXCLUSIVAMENTE destas nacoes: ${loteAtual.join(', ')}.
+            FICHAS ANTIGAS: ${JSON.stringify(fichasAntigasLote)}
+            FATOS NOVOS DESSAS NACOES: ${JSON.stringify(fatosLote)}
 
-            FICHAS ANTIGAS DESSAS NAÇÕES: ${JSON.stringify(contextoLote)}
-            NOVOS FATOS GERAIS: ${JSON.stringify(novosFatos)}
-
-            Atualize o estado cruzando as informações antigas com os fatos novos.
-            Resuma a situacao_interna e postura_externa em NO MAXIMO 2 FRASES CURTAS. Use aspas simples (').
+            Resuma a situacao_interna e postura_externa em NO MAXIMO 2 FRASES. Use aspas simples (').
 
             Retorne EXATAMENTE este JSON:
             {
               "nacoes_fichadas": [
                 {
                   "nome_nacao": "Nome da Nacao",
-                  "situacao_interna": "Resumo de até 2 frases.",
-                  "postura_externa": "Resumo de até 2 frases."
+                  "situacao_interna": "Resumo max 2 frases.",
+                  "postura_externa": "Resumo max 2 frases."
                 }
               ]
             }`;
 
-            const resultadoLote = await gerarComRetry(promptLote, `DOSSIÊ LOTE ${i + 1}`);
+            const resultadoLote = await gerarComRetry(promptLote, `DOSSIE LOTE ${i + 1}`);
             nacoesFichadasAtualizadas = nacoesFichadasAtualizadas.concat(resultadoLote.nacoes_fichadas);
         }
 
-        // ==========================================
-        // 🌍 TAREFA 3: RESUMO GLOBAL
-        // ==========================================
-        console.log("🌍 TAREFA 3: Atualizando tensões globais...");
+        console.log("🌍 TAREFA 3: Atualizando tensoes globais...");
 
-        const promptGlobal = `Você é o Arquivista Mestre.
-        ESTADO ANTERIOR: Tensões (${JSON.stringify(estadoAntigoObj.tensoes_globais_ativas)})
-        NOVOS FATOS: ${JSON.stringify(novosFatos)}
+        const promptGlobal = `ESTADO ANTERIOR: ${JSON.stringify(estadoAntigoObj.tensoes_globais_ativas)}
+        TODOS OS FATOS NOVOS: ${JSON.stringify(novosFatos)}
 
-        Atualize as tensões do mundo e faça um resumo narrativo da edição.
+        Atualize as tensoes do mundo e faca um resumo narrativo da edicao.
 
         Retorne EXATAMENTE este JSON:
         {
-          "tensoes_globais_ativas": ["Fato latente 1", "Fato latente 2"],
-          "resumo_narrativo": "Resumo curto do clima mundial após esta edição."
+          "tensoes_globais_ativas": ["Fato 1", "Fato 2"],
+          "resumo_narrativo": "Resumo curto do clima mundial."
         }`;
 
         const resultadoGlobal = await gerarComRetry(promptGlobal, "RESUMO GLOBAL");
 
-        const dadosDossie = {
-            nacoes_fichadas: nacoesFichadasAtualizadas,
-            tensoes_globais_ativas: resultadoGlobal.tensoes_globais_ativas || [],
-            resumo_narrativo: resultadoGlobal.resumo_narrativo || ""
-        };
+        console.log("🧩 TAREFA 4: Mesclando dados e salvando...");
 
-        // ==========================================
-        // 🚀 TAREFA 4: MONTAGEM E SALVAMENTO
-        // ==========================================
-        console.log("⚙️ TAREFA 4: Diagramando e salvando no banco...");
+        nacoesFichadasAtualizadas.forEach(nacaoNova => {
+            const index = estadoAntigoObj.nacoes_fichadas.findIndex(n => n.nome_nacao === nacaoNova.nome_nacao);
+            if (index !== -1) {
+                estadoAntigoObj.nacoes_fichadas[index] = nacaoNova;
+            } else {
+                estadoAntigoObj.nacoes_fichadas.push(nacaoNova);
+            }
+        });
+
+        estadoAntigoObj.tensoes_globais_ativas = resultadoGlobal.tensoes_globais_ativas || [];
+        estadoAntigoObj.resumo_narrativo = resultadoGlobal.resumo_narrativo || "";
 
         const classeHTML = "font-extrabold text-xl mt-6 mb-2 text-stone-800 border-b border-stone-300";
         const jornalFinalHTML = {
@@ -180,22 +168,15 @@ async function fecharEdicaoJornal() {
             conflitos: `<h4 class='${classeHTML}'>Relatorios de Conflito</h4><p>${dadosJornal.conflitos}</p>`
         };
 
-        const { error: erroJornal } = await supabase
-            .from('journals')
-            .insert([{ pdf_url: null, content: jornalFinalHTML }]);
+        const { error: erroJornal } = await supabase.from('journals').insert([{ pdf_url: null, content: jornalFinalHTML }]);
         if(erroJornal) throw erroJornal;
 
-        const { error: erroMemoria } = await supabase
-            .from('world_memory')
-            .insert([{ state_json: dadosDossie }]);
+        const { error: erroMemoria } = await supabase.from('world_memory').insert([{ state_json: estadoAntigoObj }]);
         if(erroMemoria) throw erroMemoria;
 
-        await supabase
-            .from('processed_entries')
-            .update({ is_used: true })
-            .eq('is_used', false);
+        await supabase.from('processed_entries').update({ is_used: true }).eq('is_used', false);
 
-        console.log("✅ CRÔNICAS DE CARMESIM PUBLICADO COM SUCESSO ABSOLUTO!");
+        console.log("✅ CRONICAS DE CARMESIM PUBLICADO COM SUCESSO ABSOLUTO!");
 
     } catch (erro) {
         console.error("❌ ERRO FATAL NO FECHAMENTO:", erro.message);
