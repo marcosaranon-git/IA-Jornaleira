@@ -3,7 +3,7 @@ const genAI = require('../infra/gemini');
 
 async function gerarComRetry(prompt, nomeTarefa, tentativas = 3) {
     const model = genAI.getGenerativeModel({ 
-        model: "gemini-2.5-flash-lite",
+        model: "gemini-2.5-flash-lite", 
         generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
         safetySettings: [
             { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
@@ -34,8 +34,8 @@ async function gerarComRetry(prompt, nomeTarefa, tentativas = 3) {
             }
 
         } catch (erro) {
-            console.log(`⚠️ ${nomeTarefa} engasgou (Tentativa ${i}/${tentativas}). Corrigindo...`);
-            if (i === tentativas) throw new Error(`Falha critica em ${nomeTarefa} apos 3 tentativas.`);
+            console.log(`⚠️ ${nomeTarefa} engasgou (Tentativa ${i}/${tentativas}). Motivo: ${erro.message}`);
+            if (i === tentativas) throw new Error(`Falha critica em ${nomeTarefa}. Motivo: ${erro.message}`);
         }
     }
 }
@@ -73,19 +73,21 @@ async function fecharEdicaoJornal() {
             if (!estadoAntigoObj.nacoes_fichadas) estadoAntigoObj.nacoes_fichadas = [];
         }
 
-        console.log("📝 TAREFA 1: Redacao escrevendo as noticias do Jornal...");
+        console.log("📝 TAREFA 1: Redacao escrevendo materias ricas e detalhadas...");
         
-        const promptJornal = `Você é a Editora do jornal "Cronicas de Carmesim".
+        // 🌟 NOVO PROMPT DO JORNAL: Sem amarras, com lista de parágrafos!
+        const promptJornal = `Você é a Editora Chefe do jornal "Cronicas de Carmesim".
         NOVOS FATOS: ${JSON.stringify(novosFatos)}
         
-        Escreva as noticias da edicao de forma sobria. PROIBIDO USAR HTML. Use aspas simples (').
+        Escreva matérias ricas, longas e detalhadas, cruzando os fatos e explicando o impacto geopolítico. Sinta-se livre para desenvolver bastante o texto.
+        PROIBIDO USAR HTML. Use aspas simples (').
         
-        Retorne EXATAMENTE este JSON:
+        Retorne EXATAMENTE este JSON, onde cada caderno recebe uma LISTA de parágrafos:
         {
-            "destaques": "Paragrafo com a noticia mais chocante.",
-            "politica": "Paragrafo de politica.",
-            "economia": "Paragrafo de economia.",
-            "conflitos": "Paragrafo de conflitos."
+            "destaques": ["Paragrafo 1 longo e detalhado da manchete...", "Paragrafo 2 desenvolvendo os detalhes..."],
+            "politica": ["Paragrafo 1 detalhado sobre aliancas...", "Paragrafo 2..."],
+            "economia": ["Paragrafo 1 sobre embargos...", "Paragrafo 2..."],
+            "conflitos": ["Paragrafo 1 relatando a guerra...", "Paragrafo 2..."]
         }`;
 
         const dadosJornal = await gerarComRetry(promptJornal, "GERAÇÃO DO JORNAL");
@@ -94,7 +96,6 @@ async function fecharEdicaoJornal() {
 
         const nacoesAfetadasSet = new Set(novosFatos.map(f => f.nacao));
         const nacoesAfetadas = Array.from(nacoesAfetadasSet);
-        console.log(`Alvos desta edicao: ${nacoesAfetadas.join(', ')}`);
 
         const lotes = [];
         for (let i = 0; i < nacoesAfetadas.length; i += 5) {
@@ -112,7 +113,7 @@ async function fecharEdicaoJornal() {
 
             const promptLote = `Atualize o dossie EXCLUSIVAMENTE destas nacoes: ${loteAtual.join(', ')}.
             FICHAS ANTIGAS: ${JSON.stringify(fichasAntigasLote)}
-            FATOS NOVOS DESSAS NACOES: ${JSON.stringify(fatosLote)}
+            FATOS NOVOS: ${JSON.stringify(fatosLote)}
 
             Resuma a situacao_interna e postura_externa em NO MAXIMO 2 FRASES. Use aspas simples (').
 
@@ -134,9 +135,9 @@ async function fecharEdicaoJornal() {
         console.log("🌍 TAREFA 3: Atualizando tensoes globais...");
 
         const promptGlobal = `ESTADO ANTERIOR: ${JSON.stringify(estadoAntigoObj.tensoes_globais_ativas)}
-        TODOS OS FATOS NOVOS: ${JSON.stringify(novosFatos)}
+        FATOS NOVOS: ${JSON.stringify(novosFatos)}
 
-        Atualize as tensoes do mundo e faca um resumo narrativo da edicao.
+        Atualize as tensoes do mundo.
 
         Retorne EXATAMENTE este JSON:
         {
@@ -146,7 +147,7 @@ async function fecharEdicaoJornal() {
 
         const resultadoGlobal = await gerarComRetry(promptGlobal, "RESUMO GLOBAL");
 
-        console.log("🧩 TAREFA 4: Mesclando dados e salvando...");
+        console.log("🧩 TAREFA 4: Diagramando HTML bonito e salvando...");
 
         nacoesFichadasAtualizadas.forEach(nacaoNova => {
             const index = estadoAntigoObj.nacoes_fichadas.findIndex(n => n.nome_nacao === nacaoNova.nome_nacao);
@@ -160,12 +161,18 @@ async function fecharEdicaoJornal() {
         estadoAntigoObj.tensoes_globais_ativas = resultadoGlobal.tensoes_globais_ativas || [];
         estadoAntigoObj.resumo_narrativo = resultadoGlobal.resumo_narrativo || "";
 
+        // 🌟 FUNÇÃO NOVA: Transforma os arrays de parágrafos em blocos de texto HTML bem formatados!
+        const formatarSessao = (arrayTextos) => {
+            if (!arrayTextos || !Array.isArray(arrayTextos)) return "<p class='text-stone-500 italic'>Sem movimentações de destaque.</p>";
+            return arrayTextos.map(p => `<p style="margin-bottom: 1rem; text-align: justify; line-height: 1.6;">${p}</p>`).join('');
+        };
+
         const classeHTML = "font-extrabold text-xl mt-6 mb-2 text-stone-800 border-b border-stone-300";
         const jornalFinalHTML = {
-            destaques: `<h4 class='${classeHTML}'>Destaques Globais</h4><p>${dadosJornal.destaques}</p>`,
-            politica: `<h4 class='${classeHTML}'>Cenario Politico</h4><p>${dadosJornal.politica}</p>`,
-            economia: `<h4 class='${classeHTML}'>Movimentacoes Economicas</h4><p>${dadosJornal.economia}</p>`,
-            conflitos: `<h4 class='${classeHTML}'>Relatorios de Conflito</h4><p>${dadosJornal.conflitos}</p>`
+            destaques: `<h4 class='${classeHTML}'>Destaques Globais</h4>${formatarSessao(dadosJornal.destaques)}`,
+            politica: `<h4 class='${classeHTML}'>Cenário Político</h4>${formatarSessao(dadosJornal.politica)}`,
+            economia: `<h4 class='${classeHTML}'>Movimentações Econômicas</h4>${formatarSessao(dadosJornal.economia)}`,
+            conflitos: `<h4 class='${classeHTML}'>Relatórios de Conflito</h4>${formatarSessao(dadosJornal.conflitos)}`
         };
 
         const { error: erroJornal } = await supabase.from('journals').insert([{ pdf_url: null, content: jornalFinalHTML }]);
